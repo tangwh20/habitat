@@ -1,0 +1,6 @@
+transformers==4.40.1
+tokenizers==0.19.1
+timm==0.9.10
+flash-attn==2.5.5
+tensorflow
+draccus
