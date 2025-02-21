@@ -4,13 +4,66 @@ This repository contains the code for the Habitat for OpenVLA project. The proje
 
 ## Installation
 
-First install habitat-lab by following the instructions [here](habitat-lab/README.md).
+### Install habitat-lab
 
-Then install dependencies for openvla project by running the following commands:
+First install habitat-lab by following the instructions [here](habitat-lab/README.md), or by running the following commands:
 
 ```bash
-# Install pytorch (CUDA 12.1)
-pip install torch==2.2.0 torchvision==0.17.0 torchaudio==2.2.0 --index-url https://download.pytorch.org/whl/cu121
-# Install other dependencies
-pip install -r requirements.txt
+# We require python>=3.9 and cmake>=3.14
+conda create -n habitat python=3.9 cmake=3.14.0
+conda activate habitat
+
+# Install habitat-sim
+conda install habitat-sim withbullet -c conda-forge -c aihabitat
+
+# Install habitat-lab
+cd habitat-lab
+pip install -e habitat-lab
+
+# Install habitat-baselines
+pip install -e habitat-baselines
 ```
+
+### Install openvla
+
+Then install openvla by following the instructions [here](openvla/README.md), or by running the following commands:
+
+```bash
+conda activate habitat
+
+# Install openvla
+cd openvla
+pip install -e .
+
+# Install other dependencies
+pip install packaging ninja
+ninja --version; echo $?  # Verify Ninja --> should return exit code "0"
+pip install "flash-attn==2.5.5" --no-build-isolation
+```
+
+## Datasets
+
+For running example script on habitat-lab, you can download the required datasets by running the following commands:
+
+```bash
+# Download the datasets
+python -m habitat_sim.utils.datasets_download --uids <replica_dataset> --data-path data
+```
+
+where `<replica_dataset>` should be replaced with the dataset you want to download. The required datasets are:
+
+ - `habitat_test_scenes`
+ - `habitat_test_pointnav_dataset`
+ - `rearrange_dataset_v2`
+ - `rearrange_pick_dataset_v0`
+ - `replica_cad_dataset`
+ - `hab_fetch`
+ - `ycb`
+
+After downloading the datasets, you can run the example script by running the following command:
+
+```bash
+python scripts/example_topdown.py
+```
+
+This example script will output top-down views in the `output` directory.
