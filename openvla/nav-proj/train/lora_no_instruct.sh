@@ -1,0 +1,14 @@
+CUDA_VISIBLE_DEVICES=3 torchrun --standalone --nnodes 1 --nproc-per-node=gpu vla-scripts/finetune.py \
+  --vla_path openvla/openvla-7b \
+  --data_root_dir /data/jiyufeng/openvla/datasets/ \
+  --dataset_name sacson \
+  --run_root_dir /data/jiyufeng/openvla/lora/run \
+  --adapter_tmp_dir /data/jiyufeng/openvla/lora/adapter \
+  --lora_rank 32 \
+  --batch_size 16 \
+  --grad_accumulation_steps 1  \
+  --learning_rate 5e-4 \
+  --image_aug False \
+  --wandb_project ft_openvla \
+  --wandb_entity aliciaji1993 \
+  --save_steps 10000
