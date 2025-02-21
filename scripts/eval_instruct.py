@@ -31,7 +31,7 @@ class EvalType(IntEnum):
 @dataclass
 class EvalConfig:
     # output settings
-    output_root_dir = Path("/data/jiyufeng/openvla/eval/lora-instruct-scratch")
+    output_root_dir = Path("/home/tangwenhao/Workspace/habitat/outputs/eval_openvla")
     device: str = "cuda:1"
 
     # training settings
