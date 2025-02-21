@@ -4,6 +4,28 @@ import pickle
 
 from pathlib import Path
 
+from dataclasses import dataclass
+
+@dataclass
+class EvalConfig:
+    # output settings
+    output_root_dir = Path("/home/tangwenhao/Workspace/habitat/outputs/eval_openvla")
+    device: str = "cuda:1"
+
+    # training settings
+    batch_size: int = 1
+    shuffle_buffer_size: int = 100_000                              # Dataloader shuffle buffer size (can reduce if OOM)
+
+    # model settings
+    run_root_dir = Path("/data/jiyufeng/openvla/lora-instruct-scratch/run")
+    exp_id: str = "openvla-7b+sacson+b16+lr-0.0005+lora-r32+dropout-0.0"
+    run_dir = run_root_dir / exp_id
+
+    # dataset settings
+    dataset_name: str = "sacson"
+    data_root_dir = Path("/data/jiyufeng/openvla/datasets/")
+
+
 def yaw_rotmat(yaw: float) -> np.ndarray:
     return np.array(
         [
