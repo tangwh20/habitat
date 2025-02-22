@@ -62,14 +62,19 @@ class OpenVLAHabitatAgent(Agent):
 
         # Get the instruction from the observations
         point_goal = observations["pointgoal_with_gps_compass"]
-        instruction = f"Go to relative position {(point_goal - self.position).tolist()}"
+        relative_goal = point_goal - self.position
+        distance = np.linalg.norm(relative_goal)
+        yaw_goal = np.arctan2(relative_goal[1], relative_goal[0])
+        instruction = f"Go to relative position {distance} meters, \
+                        relative yaw {yaw_goal - self.yaw} radians."
         instruction = instruction.lower()
 
         # Get the action from the model        
         inputs = self.processor(instruction, image).to(self.device, dtype=torch.bfloat16)
         waypoints_pred = self.vla.predict_action(**inputs, unnorm_key="sacson", do_sample=False).reshape(8,2)
-        self.position, actions_pred = waypoints_to_actions(waypoints_pred)
-        print("position:", self.position)
+        self.position, self.yaw, actions_pred = waypoints_to_actions(waypoints_pred)
+        print(f"position:{self.position}, goal:{point_goal}, distance:{distance}")
+        print(f"yaw:{self.yaw}, yaw_goal:{yaw_goal}, yaw_diff:{yaw_goal - self.yaw}")
         print("actions_pred:", actions_pred)
 
         return actions_pred
@@ -128,11 +133,6 @@ def load_model(cfg: EvalConfig):
     # configs
     device_id = cfg.device
     run_dir = cfg.run_dir
-    dataset_dir = cfg.data_root_dir / cfg.dataset_name
-    output_dir = cfg.output_root_dir / cfg.dataset_name
-    if output_dir.exists():
-        shutil.rmtree(cfg.output_root_dir)
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     # load from checkpoints directly
     processor = AutoProcessor.from_pretrained(run_dir, trust_remote_code=True)
@@ -153,7 +153,7 @@ def load_model(cfg: EvalConfig):
     return agent
 
 
-def eval():
+def eval(max_steps: int = 100):
     # Load the dataset
     config, dataset = load_dataset(
         "config/benchmark/nav/pointnav/pointnav_habitat_test.yaml"
@@ -191,12 +191,14 @@ def eval():
 
         # Repeat the steps above while agent doesn't reach the goal
         step_count = 0
-        while not env.episode_over and step_count < 100:
+        while not env.episode_over and step_count < max_steps:
             # Get the next best actions
             actions_pred = agent.act(observations)
 
             for action in actions_pred:
                 # Step in the environment
+                if env.episode_over:
+                    break
                 step_count += 1
                 observations = env.step(action)
                 info = env.get_metrics()
@@ -208,7 +210,8 @@ def eval():
 
         current_episode = env.current_episode
         # video_name = f"{os.path.basename(current_episode.scene_id)}_{current_episode.episode_id}"
-        video_name = "test"
+        import time
+        video_name = f"test-{time.strftime('%Y-%m-%d-%H-%M-%S')}"
         # Create video from images and save to disk
         images_to_video(
             vis_frames, output_path, video_name, fps=6, quality=9
@@ -217,5 +220,5 @@ def eval():
 
 
 if __name__ == "__main__":
-    eval()
+    eval(max_steps=500)
     

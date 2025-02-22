@@ -36,7 +36,7 @@ def waypoints_to_actions(waypoints: np.ndarray):
         #        distance: {distance}, \n \
         #        actions: {actions}")
     
-    return current_pos, np.array(actions)
+    return current_pos, current_yaw, np.array(actions)
 
 
 def plot_waypoints(waypoints: np.ndarray, filename: str = "waypoints.png"):
