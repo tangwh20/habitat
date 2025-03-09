@@ -34,7 +34,7 @@ repo = git.Repo(".", search_parent_directories=True)
 dir_path = repo.working_tree_dir
 data_path = os.path.join(dir_path, "data")
 output_path = os.path.join(
-    dir_path, "outputs/tutorials"
+    dir_path, "outputs/tutorials/pointnav"
 )
 os.makedirs(output_path, exist_ok=True)
 os.chdir(dir_path)
@@ -172,7 +172,7 @@ def example_top_down_map_measure():
     config = habitat.get_config(
         config_path=os.path.join(
             dir_path,
-            "config/benchmark/nav/pointnav/pointnav_habitat_test.yaml",
+            "config/benchmark/nav/pointnav/pointnav_mp3d.yaml",
         )
     )
     # Add habitat.tasks.nav.nav.TopDownMap and habitat.tasks.nav.nav.Collisions measures
@@ -197,20 +197,26 @@ def example_top_down_map_measure():
                 "collisions": CollisionsMeasurementConfig(),
             }
         )
+        config.habitat.environment.iterator_options.update(
+            {
+                "group_by_scene": False,
+            }
+        )
     # Create dataset
     dataset = habitat.make_dataset(
         id_dataset=config.habitat.dataset.type, config=config.habitat.dataset
     )
     # Create simulation environment
     with habitat.Env(config=config, dataset=dataset) as env:
+        # breakpoint()
         # Create ShortestPathFollowerAgent agent
         agent = ShortestPathFollowerAgent(
             env=env,
             goal_radius=config.habitat.task.measurements.success.success_distance,
         )
         # Create video of agent navigating in the first episode
-        num_episodes = 1
-        for _ in range(num_episodes):
+        num_episodes = 10
+        for i in range(num_episodes):
             # Load the first episode and reset agent
             observations = env.reset()
             agent.reset()
@@ -244,7 +250,7 @@ def example_top_down_map_measure():
                 vis_frames.append(frame)
 
             current_episode = env.current_episode
-            video_name = f"{os.path.basename(current_episode.scene_id)}_{current_episode.episode_id}"
+            video_name = f"{i}_{os.path.basename(current_episode.scene_id)}_{current_episode.episode_id}"
             # Create video from images and save to disk
             images_to_video(
                 vis_frames, output_path, video_name, fps=6, quality=9
