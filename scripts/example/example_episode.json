@@ -1,0 +1,1 @@
+{"episodes": [{"episode_id": "0", "scene_id": "data/scene_datasets/mp3d/1LXtFkjw3qL/1LXtFkjw3qL.glb", "start_position": [0.6514812, 0.08441114, 9.521803], "start_rotation": [0.00000, -0.23773, 0.00000, 0.97133], "goals": [{"position": [3.1420224, 0.08441114, 4.8564095], "radius": null}], "shortest_paths": null, "start_room": null}]}
