@@ -84,3 +84,13 @@ python scripts/example/example.py
 ```
 
 This will output a video of the OpenVLA agent navigating the scene in the `output` directory.
+
+## Extract step-by-step rgb images
+
+We provide a script to extract step-by-step rgb images in the `scripts/example_split.py` file. To run the script, run the following command:
+
+```bash
+python scripts/example_split.py
+```
+
+This will output step-by-step rgb images in the `output` directory for the first few episodes. The number of episodes can be modified in the `scripts/example_split.py` file.
