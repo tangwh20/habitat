@@ -67,3 +67,20 @@ python scripts/example_topdown.py
 ```
 
 This example script will output top-down views in the `output` directory.
+
+## Evaluate OpenVLA
+
+We provide a script to evaluate OpenVLA on the skokloster-castle scene. To run the evaluation script, run `scripts/evaluate_openvla_example.py`:
+
+```bash
+python scripts/evaluate_openvla_example.py
+```
+
+If you want to evaluate OpenVLA on a customized scene, you can modify the settings in the `example/example_episode.json` file. Then run the following command:
+
+```bash
+python scripts/example/example_gzip.py
+python scripts/example/example.py
+```
+
+This will output a video of the OpenVLA agent navigating the scene in the `output` directory.
