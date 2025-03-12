@@ -1,6 +1,8 @@
 import os
 import numpy as np
+import quaternion
 import git
+import json
 from PIL import Image
 from typing import TYPE_CHECKING, cast, Union
 
@@ -57,6 +59,10 @@ class ShortestPathFollowerAgent(Agent):
 
     def reset(self) -> None:
         pass
+
+    @property
+    def state(self):
+        return self.env.sim.get_agent_state()
 
 
 def example_top_down_map_measure():
@@ -131,6 +137,8 @@ def example_top_down_map_measure():
             # Repeat the steps above while agent doesn't reach the goal
             rgbs = [observations["rgb"]]
             actions = []
+            positions = []
+            rotations = []
             while not env.episode_over:
                 # Get the next best action
                 action = agent.act(observations)
@@ -138,9 +146,14 @@ def example_top_down_map_measure():
                     break
                 actions.append(action)
 
+                # Get agent state
+                positions.append(agent.state.position.tolist())
+                rotations.append(quaternion.as_float_array(agent.state.rotation).tolist())
+
                 # Step in the environment
                 observations = env.step(action)
                 rgbs.append(observations["rgb"])
+
                 # info = env.get_metrics()
                 # frame = observations_to_image(observations, info)
 
@@ -154,10 +167,19 @@ def example_top_down_map_measure():
             episode_dir = f"{os.path.basename(current_episode.scene_id).split('.')[0]}_{current_episode.episode_id}"
             os.makedirs(f"{output_path}/{episode_dir}", exist_ok=True)
             for ii, rgb in enumerate(rgbs):
-                Image.fromarray(rgb).save(f"{output_path}/{episode_dir}/{ii}.png")
-                
-            # save actions as txt
-            np.savetxt(f"{output_path}/{episode_dir}/actions.txt", actions, fmt="%d")
+                Image.fromarray(rgb).save(f"{output_path}/{episode_dir}/{ii}.png")                
+
+            # save actions and positions as json
+            assert len(actions) == len(positions) == len(rotations)
+            with open(f"{output_path}/{episode_dir}/actions.json", "w") as f:
+                json.dump(
+                    {
+                        "actions": actions,
+                        "positions": positions,
+                        "rotations": rotations
+                    }, f
+                )
+            
 
             print(f"Episode {i} done")
             print("=====================================")
