@@ -68,7 +68,9 @@ python scripts/example_topdown.py
 
 This example script will output top-down views in the `output` directory.
 
-## Evaluate OpenVLA
+## Usage
+
+### Evaluate OpenVLA
 
 We provide a script to evaluate OpenVLA on the skokloster-castle scene. To run the evaluation script, run `scripts/evaluate_openvla_example.py`:
 
@@ -85,7 +87,7 @@ python scripts/example/example.py
 
 This will output a video of the OpenVLA agent navigating the scene in the `output` directory.
 
-## Extract step-by-step rgb images
+### Extract step-by-step rgb images
 
 We provide a script to extract step-by-step rgb images in the `scripts/example_split.py` file. To run the script, run the following command:
 
@@ -94,3 +96,13 @@ python scripts/example_split.py
 ```
 
 This will output step-by-step rgb images in the `output` directory for the first few episodes. The number of episodes can be modified in the `scripts/example_split.py` file.
+
+### Use Qwen2.5-VL to generate instructions
+
+We provide instruction generation script using Qwen2.5-VL in the `scripts/qwen/process_traj.py` file. You can install qwen-vl toolkit to help you handle various types of visual input more conveniently.
+
+```bash
+pip install qwen-vl-utils[decord]
+```
+
+If you fail to use decord for video loading, you can use `pip install qwen-vl-utils` which will fall back to using torchvision for video processing.
