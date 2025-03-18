@@ -97,12 +97,22 @@ python scripts/example_split.py
 
 This will output step-by-step rgb images in the `output` directory for the first few episodes. The number of episodes can be modified in the `scripts/example_split.py` file.
 
-### Use Qwen2.5-VL to generate instructions
+### Use GPT-4o/Qwen2.5-VL to generate instructions
 
-We provide instruction generation script using Qwen2.5-VL in the `scripts/qwen/process_traj.py` file. You can install qwen-vl toolkit to help you handle various types of visual input more conveniently.
+We provide instruction generation script using Qwen2.5-VL in the `scripts/{openai, qwen}/process_traj.py` file. 
 
 ```bash
+# To use GPT-4o
+pip install openai
+python scripts/openai/process_traj.py
+
+# To use Qwen2.5-VL
 pip install qwen-vl-utils[decord]
+python scripts/qwen/process_traj.py
 ```
 
-If you fail to use decord for video loading, you can use `pip install qwen-vl-utils` which will fall back to using torchvision for video processing.
+We also provide a script to evaluate the quality of the generated instructions, that is, we count the times each instruction appears in the dataset.
+
+```bash
+python scripts/count_instruction.py
+```
