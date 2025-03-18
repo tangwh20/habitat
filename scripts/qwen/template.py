@@ -10,12 +10,12 @@ INTRO_OBS_AND_ACTION_MAP = (
 
 INTRO_OBS_AND_ACTION_STRING = (
     "Imagine you are providing natural language instructions to guide a robot in an indoor environment. "
-    "You will be given an image showing the current view, and a list of 8 locations representing the "
+    "You will be given an image showing the current view, and a list of 8 of locations representing the "
     "movement you want the robot to execute. Each location corresponds to a point in [x, y] coordinate "
     "system within the current view. \n"
-    "The x axis represents the vertical direction: positive values indicate distance in meters ahead, "
+    "The x-axis represents the vertical direction: positive values indicate distance in meters ahead, "
     "while negative values indicate distance behind. The y-axis represents the horizontal direction: "
-    "positive values indicate distance to the right, and negative values indicate distance to the left.\n"
+    "positive values indicate distance to the left, and negative values indicate distance to the right.\n"
 )
 
 INTRO_8_OBS_AND_ACTION_STRING = (
@@ -47,19 +47,11 @@ GENERATION_GUIDE = (
     "ceiling height. You can interact with doors by opening or closing them. Glass walls, however, are "
     "transparent barriers that may look like doors or open spaces but cannot be used to move through. "
     "They serve as dividers or enclosures, without providing an entrance or exit.\n"
-    "5. Pay attention to the direction of movement. If the trajectory is moving toward a specific object, "
-    "ensure the instruction reflects this. If the trajectory is moving along a path or around an object, "
-    "describe the path or object in detail. \n"
-    "6. Pay close attention to the left and right turns! In most cases, the y value of the last few steps "
-    "determines the general direction of movement. Negative y values indicate you are moving to the left, "
-    "while Positive y values indicate a rightward movement. If the y values are significantly non-zero, "
-    "make sure the instruction reflects this direction change.\n"
-
-    # "5.	Do not mix up left and right! In mose cases, y value of the last few steps determines the general"
-    # "direction of movement. Large negative y values indicate you are moving to the left, while large positive "
-    # "y values indicate a rightward movement. If the y values show little change compared to the x values, "
-    # "especially in a hallway where forward is the only valid option, it generally means you are moving "
-    # "straight forward.\n"
+    "5.	Do not mix up left and right! In mose cases, y value of the last few steps determines the general"
+    "direction of movement. Large negative y values indicate you are moving to the right, while large positive "
+    "y values indicate a leftward movement. If the y values show little change compared to the x values, "
+    "especially in a hallway where forward is the only valid option, it generally means you are moving "
+    "straight forward.\n"
     # "6.	Pay close attention to trajectories with sharply decreasing x values, as these typically indicate "
     # "backward movements. In cases where x values change much less than y values (whether increasing or "
     # "decreasing), it is more likely a left or right turn rather than a backward movement.\n"
@@ -150,9 +142,6 @@ FORMAT_ACTION = [
     "move towards {describe the movement goal}",
     "move across {describe open space}",
     "turn {left, right} at {describe the intersection}",
-    "turn {left, right} and move forward",
-    "turn {left, right} and move towards {describe the movement goal}",
-    "turn {left, right} and move across {describe open space}",
     "move along {describle the pathway}",
     "turn backwards",
     "skirt {left, right} around {describle the obstacle object}",
