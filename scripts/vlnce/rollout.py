@@ -2,6 +2,8 @@ import os
 import git
 import json
 import gzip
+import numpy as np
+from PIL import Image
 
 import habitat
 from habitat.config.default_structured_configs import (
@@ -25,26 +27,56 @@ class FixedAgent(Agent):
     def __init__(self, data_path: str):
         with gzip.open(data_path, "rt") as f:
             self.data = json.load(f)
-        self.actions = []
+        self.actions = None
+        self.forward_steps = None
+        self.reference_waypoint_steps = None
+        self.reference_action_steps = None
+        self.episode_id = None
+
+        self.views = []
 
     def act(self, observations, current_step):
         if current_step < len(self.actions):
             action = self.actions[current_step]
+            # if current_step in self.reference_steps:
+            #     self.reference_views.append(observations["rgb"])
+            self.views.append(observations["rgb"])
         else:
             action = 0
         return action
 
-    def reset(self, episode_id: str):
-        self.actions = self.data[episode_id]["actions"]
+    def reset(self, episode):
+        self.episode_id = str(episode.episode_id)
+        self.actions = np.array(self.data[self.episode_id]["actions"])
+        self.forward_steps = np.where(self.actions == 1)[0]
+
+        reference_path = np.array(episode.reference_path)
+        gt_path = np.array(self.data[self.episode_id]["locations"])
+
+        self._get_reference_steps(reference_path, gt_path)
+
+    def _get_reference_steps(self, reference_path, gt_path):
+        distance_to_reference = np.linalg.norm(
+            gt_path[:, None, :] - reference_path[None, :, :], axis=2
+        )
+        self.reference_waypoint_steps = np.argmin(distance_to_reference, axis=0)
+        movement_steps = self.forward_steps.tolist()
+        movement_steps.append(movement_steps[-1] + 1)
+        movement_steps = np.array(movement_steps)
+        self.reference_action_steps = movement_steps[self.reference_waypoint_steps]
+
+    @property
+    def waypoints(self):
+        return np.array(self.data[self.episode_id]["locations"])
+    
 
 
 repo = git.Repo(".", search_parent_directories=True)
 dir_path = repo.working_tree_dir
 config_path = "config/benchmark/nav/vln_r2r.yaml"
 output_path = os.path.join(
-    dir_path, "outputs/tutorials/vlnce"
+    dir_path, "outputs/vlnce"
 )
-os.makedirs(output_path, exist_ok=True)
 os.chdir(dir_path)
 
 
@@ -108,9 +140,14 @@ if __name__ == "__main__":
         for i in range(num_episodes):
             # Load the first episode and reset agent
             observations = env.reset()
-            episode_id = str(env.current_episode.episode_id)
-            agent.reset(episode_id)
-            print(f"Episode {episode_id}")
+            episode_id = env.current_episode.episode_id
+            scene_id = os.path.basename(env.current_episode.scene_id).split('.')[0]
+            agent.reset(env.current_episode)
+
+            if os.path.exists(os.path.join(output_path, f"{scene_id}_{episode_id}")):
+                print(f"Episode {episode_id} already exists")
+                continue
+            print(f"Episode {episode_id} started")
 
             # Get metrics
             info = env.get_metrics()
@@ -144,10 +181,35 @@ if __name__ == "__main__":
                 vis_frames.append(frame)
                 current_step += 1
 
-            current_episode = env.current_episode
-            video_name = f"{i}_{os.path.basename(current_episode.scene_id)}_{current_episode.episode_id}"
+            # Save image observations on each reference step
+            episode_output_path = os.path.join(output_path, f"{scene_id}_{episode_id}")
+            image_output_path = os.path.join(episode_output_path, "images")
+            os.makedirs(image_output_path, exist_ok=True)
+            for step, view in enumerate(agent.views):
+                if step in agent.reference_action_steps:
+                    image_path = os.path.join(image_output_path, f"step_{step}_ref.png")
+                else:
+                    image_path = os.path.join(image_output_path, f"step_{step}.png")
+                Image.fromarray(view).save(image_path)
+            agent.views.clear()
+
+            # Save actions and positions as json
+            with open(os.path.join(episode_output_path, "actions.json"), "w") as f:
+                json.dump(
+                    {
+                        "actions": agent.actions.tolist(),
+                        "reference_action_steps": agent.reference_action_steps.tolist(),
+                        "waypoints": agent.waypoints.tolist(),
+                        "reference_waypoint_steps": agent.reference_waypoint_steps.tolist()
+                    }, f
+                )
+
+            # Save video
+            video_output_path = os.path.join(output_path, "videos")
+            os.makedirs(video_output_path, exist_ok=True)
+            video_name = f"{i}_{scene_id}_{episode_id}"
             images_to_video(
-                vis_frames, output_path, video_name, fps=6, quality=9
+                vis_frames, video_output_path, video_name, fps=6, quality=9
             )
             vis_frames.clear()
 
