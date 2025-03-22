@@ -59,14 +59,14 @@ def gen_content(
         [-origin_face[1], origin_face[0]]
     ]) # rotate relative position to x-axis facing direction
 
-    current_step = origin_step
-    waypoints = [np.array([0, 0])]
-    while current_step < len(actions) - 1 and len(waypoints) < STEP_LENGTH:
-        current_step += 1
+    current_step = origin_step + 1
+    waypoints = []
+    while current_step < len(actions) and len(waypoints) < STEP_LENGTH:
         if actions[current_step] == 1:
             current_pos = pos_xy[current_step]
             current_xy = rot_mat @ (current_pos - origin_xy)
             waypoints.append(current_xy)
+        current_step += 1
 
     waypoints = np.array(waypoints)
 
@@ -102,7 +102,9 @@ def plot_result(
     ax1.set_title("Initial Front View")
     ax1.axis("off")
 
+    waypoints = np.array([[0, 0], *waypoints])
     ax2.plot(-waypoints[:, 1], waypoints[:, 0], "ro-")
+    ax2.plot(-waypoints[0, 1], waypoints[0, 0], "go", markersize=10)
     ax2.set_title("Waypoints")
     ax2.set_xlim(-2, 2)
     ax2.set_ylim(-2, 2)
@@ -151,7 +153,17 @@ if __name__ == "__main__":
             print(f"Actions: {actions[origin_step:current_step+1]}")
             print(f"Output: {output_text}")
 
-            output = json.loads(output_text)
+            try:
+                output = json.loads(output_text)
+            except:
+                print("Failed to parse output!")
+                continue
+            # try:
+            #     with open(f"{input_base_path}/{traj_id}/start_{start_step}.json", "r") as f:
+            #         output = json.load(f)
+            # except:
+            #     print(f"{input_base_path}/{traj_id}/start_{start_step}.json not found!")
+            #     continue
             reasoning = output["reasoning"]
             instruction = output["instruction"]
 
