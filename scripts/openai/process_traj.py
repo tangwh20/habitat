@@ -129,9 +129,9 @@ def plot_result(
 if __name__ == "__main__":
     model_name = "gpt-4o" # "o3-mini" # 
     base_path = "/data1/tangwenhao/datasets/split"
-    output_base_path = f"/home/tangwenhao/Workspace/habitat/outputs/{model_name}"
+    output_base_path = f"/data1/tangwenhao/datasets/{model_name}"
 
-    max_traj_num = 100
+    max_traj_num = 1000
 
     chat = ChatGPT(model_name=model_name, system_prompt=SYSTEM_PROMPT)
 
@@ -149,6 +149,8 @@ if __name__ == "__main__":
             if not (1 in actions[start_step:]):
                 break
             image, waypoints, (origin_step, current_step) = gen_content(images, positions, start_step=start_step)
+            if len(waypoints) < STEP_LENGTH:
+                break
             output_text = gen_instruction(chat, image, waypoints)
             print(f"Actions: {actions[origin_step:current_step+1]}")
             print(f"Output: {output_text}")

@@ -32,7 +32,7 @@ repo = git.Repo(".", search_parent_directories=True)
 dir_path = repo.working_tree_dir
 data_path = os.path.join(dir_path, "data")
 output_path = os.path.join(
-    dir_path, "outputs/tutorials/split_test"
+    dir_path, "/data1/tangwenhao/datasets/split"
 )
 os.makedirs(output_path, exist_ok=True)
 os.chdir(dir_path)
@@ -114,7 +114,7 @@ def example_top_down_map_measure():
             goal_radius=config.habitat.task.measurements.success.success_distance,
         )
         # Create video of agent navigating in the first episode
-        num_episodes = 20
+        num_episodes = 100000
         for i in range(num_episodes):
             # Load the first episode and reset agent
             observations = env.reset()

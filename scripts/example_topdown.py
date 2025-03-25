@@ -32,9 +32,8 @@ if TYPE_CHECKING:
 
 repo = git.Repo(".", search_parent_directories=True)
 dir_path = repo.working_tree_dir
-data_path = os.path.join(dir_path, "data")
 output_path = os.path.join(
-    dir_path, "outputs/tutorials/pointnav"
+    dir_path, "outputs/tutorials/vln"
 )
 os.makedirs(output_path, exist_ok=True)
 os.chdir(dir_path)
@@ -172,7 +171,7 @@ def example_top_down_map_measure():
     config = habitat.get_config(
         config_path=os.path.join(
             dir_path,
-            "config/benchmark/nav/pointnav/pointnav_mp3d.yaml",
+            "config/benchmark/nav/vln_r2r.yaml",
         )
     )
     # Add habitat.tasks.nav.nav.TopDownMap and habitat.tasks.nav.nav.Collisions measures
@@ -208,7 +207,7 @@ def example_top_down_map_measure():
     )
     # Create simulation environment
     with habitat.Env(config=config, dataset=dataset) as env:
-        # breakpoint()
+        breakpoint()
         # Create ShortestPathFollowerAgent agent
         agent = ShortestPathFollowerAgent(
             env=env,
@@ -223,7 +222,9 @@ def example_top_down_map_measure():
 
             # Get metrics
             info = env.get_metrics()
+            # breakpoint()
             # Concatenate RGB-D observation and topdowm map into one image
+            observations.pop("instruction")
             frame = observations_to_image(observations, info)
 
             # Remove top_down_map from metrics
@@ -243,6 +244,7 @@ def example_top_down_map_measure():
                 # Step in the environment
                 observations = env.step(action)
                 info = env.get_metrics()
+                observations.pop("instruction")
                 frame = observations_to_image(observations, info)
 
                 info.pop("top_down_map")

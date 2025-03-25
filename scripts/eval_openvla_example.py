@@ -89,7 +89,6 @@ class OpenVLAHabitatAgent(Agent):
 
 repo = git.Repo(".", search_parent_directories=True)
 dir_path = repo.working_tree_dir
-data_path = os.path.join(dir_path, "data")
 output_path = os.path.join(
     dir_path, "outputs/eval_openvla/habitat"
 )
@@ -167,9 +166,8 @@ def eval(max_steps: int = 100):
     eval_config = EvalConfig()
     eval_config.run_root_dir = Path("/data/jiyufeng/openvla/lora-instruct-scratch/run")
     eval_config.exp_id = "openvla-7b+sacson+b16+lr-0.0005+lora-r32+dropout-0.0"
-    eval_config.data_root_dir = Path(data_path)
     eval_config.output_root_dir = Path(output_path)
-    eval_config.device = "cuda:1"
+    eval_config.device = "cuda:0"
     agent = load_model(eval_config)
 
     # Create dataset

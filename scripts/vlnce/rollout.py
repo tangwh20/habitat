@@ -152,7 +152,8 @@ if __name__ == "__main__":
             # Get metrics
             info = env.get_metrics()
             # Concatenate RGB-D observation and topdowm map into one image
-            observations.pop("instruction")
+            instruction = observations.pop("instruction")
+            instruction_text = instruction["text"]
             frame = observations_to_image(observations, info)
 
             # Remove top_down_map from metrics
@@ -183,20 +184,21 @@ if __name__ == "__main__":
 
             # Save image observations on each reference step
             episode_output_path = os.path.join(output_path, f"{scene_id}_{episode_id}")
-            image_output_path = os.path.join(episode_output_path, "images")
-            os.makedirs(image_output_path, exist_ok=True)
-            for step, view in enumerate(agent.views):
-                if step in agent.reference_action_steps:
-                    image_path = os.path.join(image_output_path, f"step_{step}_ref.png")
-                else:
-                    image_path = os.path.join(image_output_path, f"step_{step}.png")
-                Image.fromarray(view).save(image_path)
-            agent.views.clear()
+            # image_output_path = os.path.join(episode_output_path, "images")
+            # os.makedirs(image_output_path, exist_ok=True)
+            # for step, view in enumerate(agent.views):
+            #     if step in agent.reference_action_steps:
+            #         image_path = os.path.join(image_output_path, f"step_{step}_ref.png")
+            #     else:
+            #         image_path = os.path.join(image_output_path, f"step_{step}.png")
+            #     Image.fromarray(view).save(image_path)
+            # agent.views.clear()
 
             # Save actions and positions as json
             with open(os.path.join(episode_output_path, "actions.json"), "w") as f:
                 json.dump(
                     {
+                        "instruction": instruction_text,
                         "actions": agent.actions.tolist(),
                         "reference_action_steps": agent.reference_action_steps.tolist(),
                         "waypoints": agent.waypoints.tolist(),
@@ -205,13 +207,13 @@ if __name__ == "__main__":
                 )
 
             # Save video
-            video_output_path = os.path.join(output_path, "videos")
-            os.makedirs(video_output_path, exist_ok=True)
-            video_name = f"{i}_{scene_id}_{episode_id}"
-            images_to_video(
-                vis_frames, video_output_path, video_name, fps=6, quality=9
-            )
-            vis_frames.clear()
+            # video_output_path = os.path.join(output_path, "videos")
+            # os.makedirs(video_output_path, exist_ok=True)
+            # video_name = f"{i}_{scene_id}_{episode_id}"
+            # images_to_video(
+            #     vis_frames, video_output_path, video_name, fps=6, quality=9
+            # )
+            # vis_frames.clear()
 
 
         

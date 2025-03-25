@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from PIL import Image
 
 # TODO: Fill in your Azure OpenAI credentials
-azure_openai = json.load(open("scripts/openai/azure_openai.json", "r"))
+azure_openai = json.load(open("/home/tangwenhao/Workspace/habitat/azure_openai.json", "r"))
 
 os.environ["OPENAI_API_VERSION"] = azure_openai["api_version"]
 os.environ["AZURE_OPENAI_API_KEY"] = azure_openai["api_key"]

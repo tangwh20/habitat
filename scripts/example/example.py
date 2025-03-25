@@ -36,8 +36,10 @@ def example():
 
     count_steps = 0
     breakpoint()
+    keystrokes = [ord(FORWARD_KEY), ord(LEFT_KEY)]
     while not env.episode_over:
-        keystroke = cv2.waitKey(0)
+        # keystroke = cv2.waitKey(0)
+        keystroke = keystrokes[count_steps % 2]
 
         if keystroke == ord(FORWARD_KEY):
             action = HabitatSimActions.move_forward
@@ -61,7 +63,10 @@ def example():
         print("Destination, distance: {:3f}, theta(radians): {:.2f}".format(
             observations["pointgoal_with_gps_compass"][0],
             observations["pointgoal_with_gps_compass"][1]))
-        cv2.imshow("RGB", transform_rgb_bgr(observations["rgb"]))
+        print("position: ", env.sim.get_agent_state().position)
+        print("rotation: ", env.sim.get_agent_state().rotation)
+        breakpoint()
+        # cv2.imshow("RGB", transform_rgb_bgr(observations["rgb"]))
 
     print("Episode finished after {} steps.".format(count_steps))
 
