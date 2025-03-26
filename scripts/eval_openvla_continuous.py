@@ -194,7 +194,7 @@ def load_model(cfg: EvalConfig):
     return agent
 
 
-def eval_onestep(config_path: str, output_path: str):
+def eval(config_path: str, output_path: str, num_episodes: int = 1):
     # Load the dataset
     config, dataset = load_dataset(config_path, use_habitat_config=True)
 
@@ -212,47 +212,53 @@ def eval_onestep(config_path: str, output_path: str):
     )
     # Create simulation environment
     with habitat.Env(config=config, dataset=dataset) as env:
-        # Load the first episode and reset agent
-        observations = env.reset()
-        agent_state = env.sim.get_agent_state() # get_agent_state returns rotations scalar-first
-        agent.reset(agent_state)
+        for i in range(num_episodes):            
+            # Load the first episode and reset agent
+            observations = env.reset()
+            agent_state = env.sim.get_agent_state() # get_agent_state returns rotations scalar-first
+            agent.reset(agent_state)
 
-        # Get metrics
-        info = env.get_metrics()
-        # Concatenate RGB-D observation and topdowm map into one image
-        instruction = observations.pop("instruction")
-        frame = observations_to_image(observations, info)
-
-        # Remove top_down_map from metrics
-        info.pop("top_down_map")
-        # Overlay numeric metrics onto frame
-        frame = overlay_frame(frame, info)
-        # Add fame to vis_frames
-        vis_frames = [frame]
-
-        # Predict actions and step in the environment
-        observations.update({"instruction": instruction})
-        actions_pred = agent.act(observations)
-        # Step in the environment
-        for action in actions_pred:
-            observations = env.step(action)
-            print(f"Action: {action}")
-            print(f"Agent state: {env.sim.get_agent_state()}")
+            # Get metrics
             info = env.get_metrics()
-            observations.pop("instruction")
+            # Concatenate RGB-D observation and topdowm map into one image
+            instruction = observations.pop("instruction")
             frame = observations_to_image(observations, info)
 
+            # Remove top_down_map from metrics
             info.pop("top_down_map")
+            # Overlay numeric metrics onto frame
             frame = overlay_frame(frame, info)
-            vis_frames.append(frame)
+            # Add fame to vis_frames
+            vis_frames = [frame]
 
-        # Create video from images and save to disk
-        import time
-        video_name = f"test-{time.strftime('%Y-%m-%d-%H-%M-%S')}"
-        images_to_video(
-            vis_frames, output_path, video_name, fps=6, quality=9
-        )
-        vis_frames.clear()
+            # Predict actions and step in the environment
+            observations.update({"instruction": instruction})
+            actions_pred = agent.act(observations)
+            # Step in the environment
+            for action in actions_pred:
+                observations = env.step(action)
+                print(f"Action: {action}")
+                print(f"Agent state: {env.sim.get_agent_state()}")
+                info = env.get_metrics()
+                observations.pop("instruction")
+                frame = observations_to_image(observations, info)
+
+                info.pop("top_down_map")
+                frame = overlay_frame(frame, info)
+                vis_frames.append(frame)
+
+            # Create video from images and save to disk
+            import time
+            episode_id = env.current_episode.episode_id
+            instruction_text = instruction["text"]
+            instruction_text = instruction_text.lower().replace(" ", "_")
+            video_name = f"{episode_id}_{instruction_text}_{time.strftime('%Y-%m-%d-%H-%M-%S')}"
+            # scene_id = os.path.basename(env.current_episode.scene_id).split('.')[0]
+            # video_name = f"{episode_id}_{scene_id}_{time.strftime('%Y-%m-%d-%H-%M-%S')}"
+            images_to_video(
+                vis_frames, output_path, video_name, fps=6, quality=9
+            )
+            vis_frames.clear()
 
 
 if __name__ == "__main__":
@@ -266,5 +272,5 @@ if __name__ == "__main__":
 
     # config_path = "scripts/example/example.yaml"
     config_path = "config/benchmark/nav/vln_r2r.yaml"
-    eval_onestep(config_path, output_path)
+    eval(config_path, output_path, num_episodes=10)
     
