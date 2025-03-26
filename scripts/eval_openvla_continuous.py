@@ -56,8 +56,7 @@ class OpenVLAContinuousAgent(Agent):
         image = Image.fromarray(observations["rgb"])
         
         # Get the instruction from the observations
-        # instruction = observations["instruction"]
-        instruction = "Move forward"
+        instruction = observations["instruction"]["text"]
         instruction = instruction.lower()
         
         # Get the action from the model        
@@ -123,12 +122,13 @@ class OpenVLAContinuousAgent(Agent):
         return self._world_pos, self._world_quat
 
 
-def load_dataset(config_path: str):
+def load_dataset(config_path: str, use_habitat_config: bool = True):
     # Create habitat config
-    # config = habitat.get_config(
-    #     config_path=os.path.join(dir_path, config_path)
-    # )
-    config = OmegaConf.load(config_path)
+    if use_habitat_config:
+        config = habitat.get_config(config_path)
+    else:
+        config = OmegaConf.load(config_path)
+    # breakpoint()
     # Add habitat.tasks.nav.nav.TopDownMap and habitat.tasks.nav.nav.Collisions measures
     with habitat.config.read_write(config):
         config.habitat.task.measurements.update(
@@ -154,6 +154,12 @@ def load_dataset(config_path: str):
         config.habitat.task.actions.update(
             {
                 "teleport": TeleportActionConfig()
+            }
+        )
+        # Use self-generated dataset
+        config.habitat.dataset.update(
+            {
+                "data_path": "/home/tangwenhao/Workspace/habitat/outputs/gpt-4o_vlnce/train.json.gz"
             }
         )
     # Create dataset
@@ -188,19 +194,17 @@ def load_model(cfg: EvalConfig):
     return agent
 
 
-def eval_onestep(output_path: str):
+def eval_onestep(config_path: str, output_path: str):
     # Load the dataset
-    config, dataset = load_dataset(
-        "scripts/example/example.yaml"
-    )
+    config, dataset = load_dataset(config_path, use_habitat_config=True)
 
     # Load the model
-    eval_config = EvalConfig()
-    eval_config.run_root_dir = Path("/data/jiyufeng/openvla/lora-instruct-scratch/run")
-    eval_config.exp_id = "openvla-7b+sacson+b16+lr-0.0005+lora-r32+dropout-0.0"
-    eval_config.output_root_dir = Path(output_path)
-    eval_config.device = "cuda:0"
-    agent = load_model(eval_config)
+    vla_config = EvalConfig()
+    vla_config.run_root_dir = Path("/data/jiyufeng/openvla/lora-instruct-scratch/run")
+    vla_config.exp_id = "openvla-7b+sacson+b16+lr-0.0005+lora-r32+dropout-0.0"
+    vla_config.output_root_dir = Path(output_path)
+    vla_config.device = "cuda:0"
+    agent = load_model(vla_config)
 
     # Create dataset
     dataset = habitat.make_dataset(
@@ -216,6 +220,7 @@ def eval_onestep(output_path: str):
         # Get metrics
         info = env.get_metrics()
         # Concatenate RGB-D observation and topdowm map into one image
+        instruction = observations.pop("instruction")
         frame = observations_to_image(observations, info)
 
         # Remove top_down_map from metrics
@@ -226,6 +231,7 @@ def eval_onestep(output_path: str):
         vis_frames = [frame]
 
         # Predict actions and step in the environment
+        observations.update({"instruction": instruction})
         actions_pred = agent.act(observations)
         # Step in the environment
         for action in actions_pred:
@@ -233,6 +239,7 @@ def eval_onestep(output_path: str):
             print(f"Action: {action}")
             print(f"Agent state: {env.sim.get_agent_state()}")
             info = env.get_metrics()
+            observations.pop("instruction")
             frame = observations_to_image(observations, info)
 
             info.pop("top_down_map")
@@ -257,5 +264,7 @@ if __name__ == "__main__":
     os.makedirs(output_path, exist_ok=True)
     os.chdir(dir_path)
 
-    eval_onestep(output_path)
+    # config_path = "scripts/example/example.yaml"
+    config_path = "config/benchmark/nav/vln_r2r.yaml"
+    eval_onestep(config_path, output_path)
     
