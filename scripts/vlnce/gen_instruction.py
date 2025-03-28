@@ -12,7 +12,7 @@ from template import (
 )
 
 SYSTEM_PROMPT = INTRO + RESPONSE_TEMPALTE
-GENERATION_PROMPT = "Examples:\n" + "\n".join(FORMAT_ACTION)
+GENERATION_PROMPT = "Single instruction examples:\n" + "\n".join(FORMAT_ACTION)
 
 def process_waypoints(waypoints: np.ndarray):
     positions = waypoints[:, [0, 2]]
@@ -94,58 +94,64 @@ if __name__ == "__main__":
         reference_waypoint_steps = np.array(data["reference_waypoint_steps"])
         reference_action_steps = np.array(data["reference_action_steps"])
 
+    reference_views = [
+        np.array(Image.open(f"{scene_path}/images/step_{step}_ref.png")) for step in reference_action_steps
+    ]
+
+    user_prompt = f"Given overall instruction: {instruction}\n" + \
+        f"Given the number of subtasks: {len(reference_waypoint_steps) - 1}\n" + \
+        GENERATION_PROMPT
+
+    response, usage = chat.send_message(reference_views, user_prompt)
+
+    print("Prompt: ", user_prompt)
+    print("Response: ", response)
+    print("Usage: ", usage)
+
+    try:
+        output = json.loads(response)
+    except:
+        print("Failed to parse output!")
+    
+    reasoning = output["reasoning"]
+    sub_instructions = output["instruction"]
+
+    assert len(sub_instructions) == len(reference_waypoint_steps) - 1, \
+        "Number of sub-instructions does not match number of sub-trajectories!"
+    
+    subtasks = []
     for i in range(len(reference_waypoint_steps) - 1):
-        if os.path.exists(f"{output_path}/subtask_{i}.json"):
-            print(f"Subtask {i} already exists!")
-            continue
         start_step = reference_waypoint_steps[i]
         end_step = reference_waypoint_steps[i + 1]
         waypoints_subtask = waypoints[start_step:end_step + 1]
         positions = process_waypoints(waypoints_subtask)
 
-        start_view = np.array(Image.open(f"{scene_path}/images/step_{reference_action_steps[i]}_ref.png"))
-        end_view = np.array(Image.open(f"{scene_path}/images/step_{reference_action_steps[i + 1]}_ref.png"))
+        subtask = {
+            "subtask_id": i,
+            "subtask_instruction": sub_instructions[i],
+            "world_positions": waypoints_subtask.tolist(),
+            "relative_positions": positions.tolist(),
+            "actions": actions[reference_action_steps[i]:reference_action_steps[i + 1] + 1].tolist(),
+        }
 
-        user_prompt = f"Given overall instruction: {instruction}\n" + \
-            f"Given list of locations: {positions.tolist()}\n" + GENERATION_PROMPT
-
-        response = chat.send_message([start_view, end_view], user_prompt)
-
-        print("Response: ", response)
-        print("Actions: ", actions[reference_action_steps[i]:reference_action_steps[i + 1] + 1])
-
-        try:
-            output = json.loads(response)
-        except:
-            print("Failed to parse output!")
-            continue
-        reasoning = output["reasoning"]
-        sub_instruction = output["instruction"]
-
-        with open(f"{output_path}/subtask_{i}.json", "w") as f:
-            json.dump(
-                {
-                    "overall_instruction": instruction,
-                    "waypoints": positions.tolist(),
-                    "actions": actions[reference_action_steps[i]:reference_action_steps[i + 1] + 1].tolist(),
-                    "reasoning": reasoning,
-                    "instruction": sub_instruction
-                }, f
-            )
-
-        # with open(f"{output_path}/subtask_{i}.json", "r") as f:
-        #     output = json.load(f)
-        #     reasoning = output["reasoning"]
-        #     sub_instruction = output["instruction"]
+        subtasks.append(subtask)
 
         plot_result(
             f"{output_path}/subtask_{i}.png",
-            image1=start_view,
-            image2=end_view,
+            image1=np.array(Image.open(f"{scene_path}/images/step_{reference_action_steps[i]}_ref.png")),
+            image2=np.array(Image.open(f"{scene_path}/images/step_{reference_action_steps[i + 1]}_ref.png")),
             waypoints=positions,
             actions=actions[reference_action_steps[i]:reference_action_steps[i + 1] + 1],
             reasoning=reasoning,
-            instruction=sub_instruction
+            instruction=sub_instructions[i]
         )
 
-        # break
+    with open(f"{output_path}/subtasks.json", "w") as f:
+        json.dump(
+            {
+                "scene_id": scene_id,
+                "overall_instruction": instruction,
+                "subtasks": subtasks
+            }, f
+        )
+
