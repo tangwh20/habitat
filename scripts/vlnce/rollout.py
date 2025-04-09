@@ -75,7 +75,7 @@ repo = git.Repo(".", search_parent_directories=True)
 dir_path = repo.working_tree_dir
 config_path = "config/benchmark/nav/vln_r2r.yaml"
 output_path = os.path.join(
-    dir_path, "outputs/vlnce"
+    dir_path, "/data1/tangwenhao/datasets/vlnce_rxr_split"
 )
 os.chdir(dir_path)
 
@@ -110,7 +110,7 @@ def load_dataset(dir_path, config_path):
         )
         config.habitat.dataset.update(
             {
-                "data_path": "data/versioned_data/R2R_VLNCE_v1-3_preprocessed/{split}/{split}.json.gz",
+                "data_path": "data/datasets/vln/mp3d/rxr/v1/{split}/{split}.json.gz",
             }
         )
         config.habitat.environment.iterator_options.update(
@@ -133,10 +133,11 @@ if __name__ == "__main__":
     # Create simulation environment
     with habitat.Env(config=config, dataset=dataset) as env:
         # breakpoint()
-        gt_data_path = "/home/tangwenhao/Workspace/habitat/data/versioned_data/R2R_VLNCE_v1-3_preprocessed/train/train_gt.json.gz"
+        # gt_data_path = "/home/tangwenhao/Workspace/habitat/data/versioned_data/R2R_VLNCE_v1-3_preprocessed/train/train_gt.json.gz"
+        gt_data_path = "/home/tangwenhao/Workspace/habitat/data/datasets/vln/mp3d/rxr/v1/train/train_gt.json.gz"
         agent = FixedAgent(gt_data_path)
 
-        num_episodes = 10
+        num_episodes = 119052
         for i in range(num_episodes):
             # Load the first episode and reset agent
             observations = env.reset()
@@ -184,15 +185,15 @@ if __name__ == "__main__":
 
             # Save image observations on each reference step
             episode_output_path = os.path.join(output_path, f"{scene_id}_{episode_id}")
-            # image_output_path = os.path.join(episode_output_path, "images")
-            # os.makedirs(image_output_path, exist_ok=True)
-            # for step, view in enumerate(agent.views):
-            #     if step in agent.reference_action_steps:
-            #         image_path = os.path.join(image_output_path, f"step_{step}_ref.png")
-            #     else:
-            #         image_path = os.path.join(image_output_path, f"step_{step}.png")
-            #     Image.fromarray(view).save(image_path)
-            # agent.views.clear()
+            image_output_path = os.path.join(episode_output_path, "images")
+            os.makedirs(image_output_path, exist_ok=True)
+            for step, view in enumerate(agent.views):
+                if step in agent.reference_action_steps:
+                    image_path = os.path.join(image_output_path, f"step_{step}_ref.png")
+                else:
+                    image_path = os.path.join(image_output_path, f"step_{step}.png")
+                Image.fromarray(view).save(image_path)
+            agent.views.clear()
 
             # Save actions and positions as json
             with open(os.path.join(episode_output_path, "actions.json"), "w") as f:
@@ -214,6 +215,10 @@ if __name__ == "__main__":
             #     vis_frames, video_output_path, video_name, fps=6, quality=9
             # )
             # vis_frames.clear()
+
+            print("===============================================================")
+            print(f"Finished {i + 1}/{num_episodes} episodes")
+            print("===============================================================")
 
 
         
