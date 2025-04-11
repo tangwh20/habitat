@@ -1,7 +1,7 @@
 import gzip
 import json
 
-data_path = "/home/tangwenhao/Workspace/habitat/data/datasets/R2R_VLNCE_v1-3_preprocessed"
+data_path = "/home/tangwenhao/Workspace/habitat/data/versioned_data/R2R_VLNCE_v1-3_preprocessed"
 split = "train"
 
 with gzip.open(f"{data_path}/{split}/{split}.json.gz", "rt") as f:

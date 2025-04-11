@@ -79,7 +79,7 @@ class ChatGPT(ChatWrapper):
                                ],
                 },
             ],
-            # response_format={"type": "json_object"},
+            response_format={"type": "json_object"},
         )
         response = completion.choices[0].message
         if verbose:

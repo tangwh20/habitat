@@ -88,6 +88,11 @@ def load_dataset(dir_path, config_path):
     # Add habitat.tasks.nav.nav.TopDownMap and habitat.tasks.nav.nav.Collisions measures
     with habitat.config.read_write(config):
         # breakpoint()
+        config.habitat.update(
+            {
+                "seed": 200,
+            }
+        )
         config.habitat.task.measurements.update(
             {
                 "top_down_map": TopDownMapMeasurementConfig(
@@ -126,7 +131,90 @@ def load_dataset(dir_path, config_path):
     return config, dataset
 
 
+def rollout(env: habitat.Env, agent: FixedAgent):
+    # Load the first episode and reset agent
+    observations = env.reset()
+    episode_id = env.current_episode.episode_id
+    scene_id = os.path.basename(env.current_episode.scene_id).split('.')[0]
+    agent.reset(env.current_episode)
+
+    if os.path.exists(os.path.join(output_path, f"{scene_id}_{episode_id}")):
+        print(f"Episode {episode_id} already exists")
+        return 
+    print(f"Episode {episode_id} started")
+
+    # Get metrics
+    info = env.get_metrics()
+    # Concatenate RGB-D observation and topdowm map into one image
+    instruction = observations.pop("instruction")
+    instruction_text = instruction["text"]
+    frame = observations_to_image(observations, info)
+
+    # Remove top_down_map from metrics
+    info.pop("top_down_map")
+    # Overlay numeric metrics onto frame
+    frame = overlay_frame(frame, info)
+    # Add fame to vis_frames
+    vis_frames = [frame]
+
+    current_step = 0
+    # Repeat the steps above while agent doesn't reach the goal
+    while not env.episode_over:
+        # Get the next best action
+        action = agent.act(observations, current_step)
+        if action is None:
+            break
+
+        # Step in the environment
+        observations = env.step(action)
+        info = env.get_metrics()
+        observations.pop("instruction")
+        frame = observations_to_image(observations, info)
+
+        info.pop("top_down_map")
+        frame = overlay_frame(frame, info)
+        vis_frames.append(frame)
+        current_step += 1
+
+    # Save image observations on each reference step
+    episode_output_path = os.path.join(output_path, f"{scene_id}_{episode_id}")
+    image_output_path = os.path.join(episode_output_path, "images")
+    os.makedirs(image_output_path, exist_ok=True)
+    for step, view in enumerate(agent.views):
+        if step in agent.reference_action_steps:
+            image_path = os.path.join(image_output_path, f"step_{step}_ref.png")
+        else:
+            image_path = os.path.join(image_output_path, f"step_{step}.png")
+        Image.fromarray(view).save(image_path)
+    agent.views.clear()
+
+    # Save actions and positions as json
+    with open(os.path.join(episode_output_path, "actions.json"), "w") as f:
+        json.dump(
+            {
+                "instruction": instruction_text,
+                "actions": agent.actions.tolist(),
+                "reference_action_steps": agent.reference_action_steps.tolist(),
+                "waypoints": agent.waypoints.tolist(),
+                "reference_waypoint_steps": agent.reference_waypoint_steps.tolist()
+            }, f
+        )
+
+    # Save video
+    # video_output_path = os.path.join(output_path, "videos")
+    # os.makedirs(video_output_path, exist_ok=True)
+    # video_name = f"{i}_{scene_id}_{episode_id}"
+    # images_to_video(
+    #     vis_frames, video_output_path, video_name, fps=6, quality=9
+    # )
+    # vis_frames.clear()
+
+
 if __name__ == "__main__":
+    # Create error log file
+    import time
+    err_f = open(f"logs/rollout_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log", "a")
+
     config, dataset = load_dataset(dir_path, config_path)
     print(config)
     
@@ -139,87 +227,20 @@ if __name__ == "__main__":
 
         num_episodes = 119052
         for i in range(num_episodes):
-            # Load the first episode and reset agent
-            observations = env.reset()
-            episode_id = env.current_episode.episode_id
-            scene_id = os.path.basename(env.current_episode.scene_id).split('.')[0]
-            agent.reset(env.current_episode)
-
-            if os.path.exists(os.path.join(output_path, f"{scene_id}_{episode_id}")):
-                print(f"Episode {episode_id} already exists")
+            # Run the agent in the environment
+            try:
+                rollout(env, agent)
+            except Exception as e:
+                err_f.write(f"Error in episode {env.current_episode.episode_id}: {e}\n")
+                err_f.flush()
+                print(f"Error in episode {env.current_episode.episode_id}: {e}")
                 continue
-            print(f"Episode {episode_id} started")
-
-            # Get metrics
-            info = env.get_metrics()
-            # Concatenate RGB-D observation and topdowm map into one image
-            instruction = observations.pop("instruction")
-            instruction_text = instruction["text"]
-            frame = observations_to_image(observations, info)
-
-            # Remove top_down_map from metrics
-            info.pop("top_down_map")
-            # Overlay numeric metrics onto frame
-            frame = overlay_frame(frame, info)
-            # Add fame to vis_frames
-            vis_frames = [frame]
-
-            current_step = 0
-            # Repeat the steps above while agent doesn't reach the goal
-            while not env.episode_over:
-                # Get the next best action
-                action = agent.act(observations, current_step)
-                if action is None:
-                    break
-
-                # Step in the environment
-                observations = env.step(action)
-                info = env.get_metrics()
-                observations.pop("instruction")
-                frame = observations_to_image(observations, info)
-
-                info.pop("top_down_map")
-                frame = overlay_frame(frame, info)
-                vis_frames.append(frame)
-                current_step += 1
-
-            # Save image observations on each reference step
-            episode_output_path = os.path.join(output_path, f"{scene_id}_{episode_id}")
-            image_output_path = os.path.join(episode_output_path, "images")
-            os.makedirs(image_output_path, exist_ok=True)
-            for step, view in enumerate(agent.views):
-                if step in agent.reference_action_steps:
-                    image_path = os.path.join(image_output_path, f"step_{step}_ref.png")
-                else:
-                    image_path = os.path.join(image_output_path, f"step_{step}.png")
-                Image.fromarray(view).save(image_path)
-            agent.views.clear()
-
-            # Save actions and positions as json
-            with open(os.path.join(episode_output_path, "actions.json"), "w") as f:
-                json.dump(
-                    {
-                        "instruction": instruction_text,
-                        "actions": agent.actions.tolist(),
-                        "reference_action_steps": agent.reference_action_steps.tolist(),
-                        "waypoints": agent.waypoints.tolist(),
-                        "reference_waypoint_steps": agent.reference_waypoint_steps.tolist()
-                    }, f
-                )
-
-            # Save video
-            # video_output_path = os.path.join(output_path, "videos")
-            # os.makedirs(video_output_path, exist_ok=True)
-            # video_name = f"{i}_{scene_id}_{episode_id}"
-            # images_to_video(
-            #     vis_frames, video_output_path, video_name, fps=6, quality=9
-            # )
-            # vis_frames.clear()
 
             print("===============================================================")
             print(f"Finished {i + 1}/{num_episodes} episodes")
             print("===============================================================")
 
-
+    err_f.close()
+    print("Finished all episodes")
         
         

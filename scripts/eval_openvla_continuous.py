@@ -131,6 +131,7 @@ def load_dataset(config_path: str, use_habitat_config: bool = True):
     # breakpoint()
     # Add habitat.tasks.nav.nav.TopDownMap and habitat.tasks.nav.nav.Collisions measures
     with habitat.config.read_write(config):
+        config.habitat.seed = 100
         config.habitat.task.measurements.update(
             {
                 "top_down_map": TopDownMapMeasurementConfig(
@@ -162,6 +163,11 @@ def load_dataset(config_path: str, use_habitat_config: bool = True):
                 "data_path": "/home/tangwenhao/Workspace/habitat/outputs/gpt-4o_vlnce/train.json.gz"
             }
         )
+        config.habitat.environment.iterator_options.update(
+            {
+                "group_by_scene": False,
+            }
+        )
     # Create dataset
     dataset = habitat.make_dataset(
         id_dataset=config.habitat.dataset.type, config=config.habitat.dataset
@@ -176,12 +182,13 @@ def load_model(cfg: EvalConfig):
     run_dir = cfg.run_dir
 
     # load from checkpoints directly
-    processor = AutoProcessor.from_pretrained(run_dir, trust_remote_code=True)
+    processor = AutoProcessor.from_pretrained(run_dir, trust_remote_code=True, local_files_only=True)
     vla = AutoModelForVision2Seq.from_pretrained(
         run_dir,
         torch_dtype=torch.bfloat16,
         low_cpu_mem_usage=True,
         trust_remote_code=True,
+        local_files_only=True,
     ).to(device_id)
 
     # load dataset statistics
@@ -265,7 +272,7 @@ if __name__ == "__main__":
     repo = git.Repo(".", search_parent_directories=True)
     dir_path = repo.working_tree_dir
     output_path = os.path.join(
-        dir_path, "outputs/eval_openvla/continuous"
+        dir_path, "outputs/eval_openvla/continuous_seed100"
     )
     os.makedirs(output_path, exist_ok=True)
     os.chdir(dir_path)

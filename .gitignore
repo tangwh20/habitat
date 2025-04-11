@@ -8,4 +8,5 @@ outputs/
 *.png
 *.json
 
-test_*
+*.log
+test*
