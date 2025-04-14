@@ -38,6 +38,7 @@ if __name__ == "__main__":
             viewpoints_dict[viewpoint]["position"] for viewpoint in traj["path"] if viewpoint in viewpoints_dict
         ]
         viewpoints = np.array(viewpoints)
+        viewpoints[:, 1] -= 1.35
         start_position = viewpoints[0]
         start_rotation = heading2rotation(viewpoints[1] - viewpoints[0])
         goal_positions = viewpoints[1:]
@@ -60,8 +61,12 @@ if __name__ == "__main__":
         episodes.append(episode)
         print(f"Finished {i+1}/{len(data)}")
 
+    traj_data = {
+        "episodes": episodes,
+    }
+
     with open(f"{data_path}/{version}/{split}_new.json", "w") as f:
-        json.dump(episodes, f)
+        json.dump(traj_data, f)
 
     with gzip.open(f"{data_path}/{version}/{split}_new.json.gz", "wt") as f:
-        json.dump(episodes, f)
+        json.dump(traj_data, f)
