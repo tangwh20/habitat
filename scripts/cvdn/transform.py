@@ -54,6 +54,8 @@ if __name__ == "__main__":
                     "radius": 0.5,
                 } for goal_position in goal_positions
             ],
+            "dialog": traj["dialog_history"],
+            "target": traj["target"],
             "shortest_paths": None,
             "start_room": None
         }

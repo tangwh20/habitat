@@ -4,7 +4,7 @@ import git
 import quaternion
 import numpy as np
 from PIL import Image
-from typing import TYPE_CHECKING, cast, Union, Dict
+from typing import TYPE_CHECKING, cast, Union, Dict, List
 
 import habitat
 from habitat.core.agent import Agent
@@ -70,29 +70,9 @@ def get_config(dir_path: str, config_path: str):
     # Add habitat.tasks.nav.nav.TopDownMap and habitat.tasks.nav.nav.Collisions measures
     with habitat.config.read_write(config):
         config.habitat.seed = 0
-        config.habitat.task.measurements.update(
-            {
-                "top_down_map": TopDownMapMeasurementConfig(
-                    map_padding=3,
-                    map_resolution=1024,
-                    draw_source=True,
-                    draw_border=True,
-                    draw_shortest_path=True,
-                    draw_view_points=True,
-                    draw_goal_positions=True,
-                    draw_goal_aabbs=True,
-                    fog_of_war=FogOfWarConfig(
-                        draw=True,
-                        visibility_dist=5.0,
-                        fov=90,
-                    ),
-                ),
-                "collisions": CollisionsMeasurementConfig(),
-            }
-        )
         config.habitat.dataset.update(
             {
-                "data_path": "/home/tangwenhao/Workspace/habitat/data/datasets/vln/mp3d/cvdn/v1/train_dialog.json.gz"
+                "data_path": "/home/tangwenhao/Workspace/habitat/data/datasets/vln/mp3d/cvdn/v1/train_new.json.gz"
             }
         )
         config.habitat.environment.iterator_options.update(
@@ -149,7 +129,22 @@ def get_extra_data(single_raw_data, viewpoints_dict):
     }
 
 
-def rollout(env: habitat.Env, agent: Agent):
+def process_dialog(dialog: List[Dict], goal_idxs: List[int]):
+    dialog_data = []
+    for dialog_item in dialog:
+        nav_idx = dialog_item["nav_idx"]
+        nav_idx_new = np.where(np.array(goal_idxs) == nav_idx)[0]
+        dialog_data.append(
+            {
+                "nav_idx": int(nav_idx_new[0]) if len(nav_idx_new) > 0 else -1,
+                "role": dialog_item["role"],
+                "message": dialog_item["message"],
+            }
+        )
+    return dialog_data
+
+
+def rollout(env: habitat.Env, agent: ShortestPathFollowerAgent):
     # Load the first episode and reset agent
     observations = env.reset()
     agent.reset()
@@ -165,8 +160,6 @@ def rollout(env: habitat.Env, agent: Agent):
     # Concatenate RGB-D observation and topdowm map into one image
     frame = observations_to_image(observations, info)
 
-    # Remove top_down_map from metrics
-    info.pop("top_down_map")
     # Overlay numeric metrics onto frame
     frame = overlay_frame(frame, info)
     # Add fame to vis_frames
@@ -174,11 +167,13 @@ def rollout(env: habitat.Env, agent: Agent):
 
     # Repeat the steps above while agent doesn't reach the goal
     rgbs = [observations["rgb"]]
+    goal_idxs = []
     actions = []
     positions = []
     rotations = []
     while not env.episode_over:
         # Get the next best action
+        goal_idxs.append(agent.current_goal_index)
         action = agent.act(observations)
         if action is None:
             break
@@ -195,7 +190,6 @@ def rollout(env: habitat.Env, agent: Agent):
         info = env.get_metrics()
         frame = observations_to_image(observations, info)
 
-        info.pop("top_down_map")
         frame = overlay_frame(frame, info)
         vis_frames.append(frame)
     rgbs.pop()
@@ -203,20 +197,22 @@ def rollout(env: habitat.Env, agent: Agent):
 
     os.makedirs(f"{output_path}/{episode_dir}", exist_ok=True)
     for ii, rgb in enumerate(rgbs):
-        Image.fromarray(rgb).save(f"{output_path}/{episode_dir}/{ii}.png")                
+        Image.fromarray(rgb).save(f"{output_path}/{episode_dir}/{ii}.png")
+
+    target = current_episode.target
+    dialog = current_episode.dialog
 
     # save actions and positions as json
     assert len(actions) == len(positions) == len(rotations)
     with open(f"{output_path}/{episode_dir}/actions.json", "w") as f:
         json.dump(
             {
+                "target": target,
+                "dialog": process_dialog(dialog, goal_idxs),
                 "actions": actions,
                 "positions": positions,
                 "rotations": rotations,
-                **get_extra_data(
-                    raw_data[int(current_episode.episode_id)],
-                    viewpoints_dict
-                )
+                "goal_idxs": goal_idxs,
             }, f
         )
     
@@ -237,16 +233,12 @@ if __name__ == "__main__":
     # output_path = os.path.join(
     #     dir_path, "outputs/cvdn_split"
     # )
-    output_path = "/data1/tangwenhao/datasets/cvdn_v1_split"
+    output_path = "/data1/tangwenhao/datasets/cvdn_with_dialog"
     os.makedirs(output_path, exist_ok=True)
     os.chdir(dir_path)
 
     import time
     err_f = open(f"err_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log", "a")
-
-    # Read instructions from original json file
-    with open("/home/tangwenhao/Workspace/habitat/data/datasets/vln/mp3d/cvdn/v1/train.json", "r") as f:
-        raw_data = json.load(f)
     
     # Read viewpoints map
     with open("/data1/tangwenhao/datasets/matterport3d/viewpoints.json", "r") as f:
@@ -269,7 +261,7 @@ if __name__ == "__main__":
             goal_radius=config.habitat.task.measurements.success.success_distance,
         )
         # Create video of agent navigating in the first episode
-        num_episodes = len(raw_data)
+        num_episodes = 1299 # len(raw_data)
         for i in range(num_episodes):
             try:
                 rollout(env, agent)
