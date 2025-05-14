@@ -93,7 +93,7 @@ def get_config(dir_path: str, config_path: str):
         config.habitat.dataset.update(
             {
                 # "data_path": "/home/tangwenhao/Workspace/habitat/scripts/example/example_episode.json.gz"
-                "data_path": "/home/tangwenhao/Workspace/habitat/data/versioned_data/REVERIE_v1/train_new.json.gz"
+                "data_path": "/home/tangwenhao/Workspace/habitat/data/datasets/vln/mp3d/reverie/v1/train_new.json.gz"
             }
         )
         config.habitat.environment.iterator_options.update(
@@ -113,10 +113,8 @@ if __name__ == "__main__":
     repo = git.Repo(".", search_parent_directories=True)
     dir_path = repo.working_tree_dir
     data_path = os.path.join(dir_path, "data")
-    # output_path = os.path.join(
-    #     dir_path, "outputs/reverie_split"
-    # )
-    output_path = "/data1/tangwenhao/datasets/reverie_split"
+    output_path = os.path.join(dir_path, "outputs/reverie_split")
+    # output_path = "/data1/tangwenhao/datasets/reverie_split"
     os.makedirs(output_path, exist_ok=True)
     os.chdir(dir_path)
 
@@ -142,7 +140,7 @@ if __name__ == "__main__":
             goal_radius=config.habitat.task.measurements.success.success_distance,
         )
         # Create video of agent navigating in the first episode
-        num_episodes = len(raw_data)
+        num_episodes = 10 # len(raw_data)
         for i in range(num_episodes):
             # Load the first episode and reset agent
             observations = env.reset()
@@ -164,7 +162,7 @@ if __name__ == "__main__":
             # Overlay numeric metrics onto frame
             frame = overlay_frame(frame, info)
             # Add fame to vis_frames
-            # vis_frames = [frame]
+            vis_frames = [frame]
 
             # Repeat the steps above while agent doesn't reach the goal
             rgbs = [observations["rgb"]]
@@ -186,12 +184,12 @@ if __name__ == "__main__":
                 observations = env.step(action)
                 rgbs.append(observations["rgb"])
 
-                # info = env.get_metrics()
-                # frame = observations_to_image(observations, info)
+                info = env.get_metrics()
+                frame = observations_to_image(observations, info)
 
-                # info.pop("top_down_map")
-                # frame = overlay_frame(frame, info)
-                # vis_frames.append(frame)
+                info.pop("top_down_map")
+                frame = overlay_frame(frame, info)
+                vis_frames.append(frame)
             rgbs.pop()
             assert len(rgbs) == len(actions)
 
@@ -208,17 +206,17 @@ if __name__ == "__main__":
                         "positions": positions,
                         "rotations": rotations,
                         "instructions_l": raw_data[i]["instructions_l"],
-                        "instructions": raw_data[i]["instructions"],
+                        "instructions": raw_data[int(current_episode.episode_id)]["instructions"],
                     }, f
                 )
             
 
-            # video_name = f"{os.path.basename(current_episode.scene_id).split('.')[0]}_{current_episode.episode_id}"
-            # # Create video from images and save to disk
-            # images_to_video(
-            #     vis_frames, output_path, video_name, fps=6, quality=9
-            # )
-            # vis_frames.clear()
+            video_name = f"{os.path.basename(current_episode.scene_id).split('.')[0]}_{current_episode.episode_id}"
+            # Create video from images and save to disk
+            images_to_video(
+                vis_frames, output_path, video_name, fps=6, quality=9
+            )
+            vis_frames.clear()
 
             # breakpoint()
             # num_goals = len(cast(NavigationEpisode, current_episode).goals)

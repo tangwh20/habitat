@@ -15,6 +15,7 @@ FINISH="f"
 def transform_rgb_bgr(image):
     return image[:, :, [2, 1, 0]]
 
+# {"episode_id": "1", "scene_id": "data/scene_datasets/mp3d/1LXtFkjw3qL/1LXtFkjw3qL.glb", "start_position": [0.6514812, 0.08441114, 9.521803], "start_rotation": [0.00000, -0.23773, 0.00000, 0.97133], "goals": [{"position": [3.1420224, 0.08441114, 4.8564095], "radius": null}], "shortest_paths": null, "start_room": null}
 
 def example():
     # config = habitat.get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
@@ -33,6 +34,8 @@ def example():
     cv2.imwrite("scripts/example/example_rgb.png", transform_rgb_bgr(observations["rgb"]))
 
     print("Agent stepping around inside environment.")
+    print("position: ", env.sim.get_agent_state().position)
+    print("rotation: ", env.sim.get_agent_state().rotation)
 
     count_steps = 0
     breakpoint()
@@ -60,9 +63,9 @@ def example():
         observations = env.step(action)
         count_steps += 1
 
-        print("Destination, distance: {:3f}, theta(radians): {:.2f}".format(
-            observations["pointgoal_with_gps_compass"][0],
-            observations["pointgoal_with_gps_compass"][1]))
+        # print("Destination, distance: {:3f}, theta(radians): {:.2f}".format(
+        #     observations["pointgoal_with_gps_compass"][0],
+        #     observations["pointgoal_with_gps_compass"][1]))
         print("position: ", env.sim.get_agent_state().position)
         print("rotation: ", env.sim.get_agent_state().rotation)
         breakpoint()
