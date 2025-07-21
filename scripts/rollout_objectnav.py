@@ -51,23 +51,34 @@ class ShortestPathFollowerAgent(Agent):
             sim=cast("HabitatSim", env.sim),
             goal_radius=goal_radius,
             return_one_hot=False,
-            stop_on_error=False,
         )
+        self.current_goal_index = 0
 
     def act(self, observations: "Observations") -> Union[int, np.ndarray]:
-        return self.shortest_path_follower.get_next_action(
-            cast(NavigationEpisode, self.env.current_episode).goals[0].position
-        )
+        goals = cast(NavigationEpisode, self.env.current_episode).goals
+        goal_position = goals[self.current_goal_index].position
+        # breakpoint()
+        goal_position[1] = float(self.state.position[1])
+        action = self.shortest_path_follower.get_next_action(goal_position)
+        while action == 0:
+            self.current_goal_index += 1
+            if self.current_goal_index >= len(goals):
+                return action
+            else:
+                goal_position = goals[self.current_goal_index].position
+                goal_position[1] = float(self.state.position[1])
+                action = self.shortest_path_follower.get_next_action(goal_position)
+        return action
 
     def reset(self) -> None:
-        pass
+        self.current_goal_index = 0
 
     @property
     def state(self):
         return self.env.sim.get_agent_state()
 
 
-def example_top_down_map_measure(config_path: str = ""):
+def rollout(config_path: str = ""):
     # Create habitat config
     config = habitat.get_config(
         config_path=os.path.join(dir_path, config_path)
@@ -139,7 +150,7 @@ def example_top_down_map_measure(config_path: str = ""):
             positions = []
             rotations = []
             while not env.episode_over:
-                breakpoint()
+                # breakpoint()
                 # Get the next best action
                 action = agent.act(observations)
                 if action is None:
@@ -195,5 +206,5 @@ def example_top_down_map_measure(config_path: str = ""):
 
 
 if __name__ == "__main__":
-    # example_top_down_map_measure(config_path="config/benchmark/nav/objectnav/objectnav_hm3d.yaml")
-    example_top_down_map_measure(config_path="config/benchmark/nav/objectnav/objectnav_mp3d.yaml")
+    # rollout(config_path="config/benchmark/nav/objectnav/objectnav_hm3d.yaml")
+    rollout(config_path="config/benchmark/nav/objectnav/objectnav_mp3d.yaml")

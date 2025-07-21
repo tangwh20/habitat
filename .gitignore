@@ -4,9 +4,13 @@ __pycache__/
 
 data/
 outputs/
+logs/
+
 
 *.png
 *.json
+*.json.gz
+*.tar.gz
 
 *.log
-test*
+test-
