@@ -21,16 +21,24 @@ from habitat.utils.visualizations.utils import (
 )
 
 
+STEP_LENGTH = 8
+
+
 class FixedAgent(Agent):
     """
     An agent that follows a fixed sequence of actions.
     """
-    def __init__(self, data_path: str):
-        with open(data_path, "r") as f:
-            self.data = json.load(f)
+    def __init__(self, action_data_path: str, gt_data_path: str = None):
+        with open(action_data_path, "r") as f:
+            self.action_data = json.load(f)
+        if gt_data_path:
+            with open(gt_data_path, "r") as f:
+                self.data = json.load(f)
+        
         self.actions = None
         self.forward_steps = None
-        self.episode_id = None
+
+        self.goal_position = None
 
         self.views = []
         self.positions = []
@@ -53,20 +61,29 @@ class FixedAgent(Agent):
         self.rotations.append(rotation)
 
     def reset(self, episode):
-        self.episode_id = str(episode.trajectory_id)
-        actions = self.data[self.episode_id]["actions"]
-        if actions[-1] != 0:  # Ensure the last action is STOP
-            actions.append(0)
+        actions = self.action_data[str(episode.trajectory_id)]["actions"]
+        if 0 in actions:
+            actions = actions[:actions.index(0)]
+        actions.append(0)  # Ensure the last action is STOP
         self.actions = np.array(actions)
-        self.forward_steps = np.where(self.actions == 1)[0]
+
+        gt_positions = np.array(self.data[str(episode.episode_id)]["locations"])
+        gt_actions = np.array(self.data[str(episode.episode_id)]["actions"])
+
+        forward_steps = np.where(gt_actions <= 1)[0]
+        assert len(forward_steps) == len(gt_positions), \
+            "Forward steps and positions must have the same length"
+        current_step = forward_steps[episode.trajectory_id]
+        goal_step = current_step + STEP_LENGTH
+        try:
+            goal_forward_step = np.where(forward_steps >= goal_step)[0][0]
+        except IndexError:
+            goal_forward_step = len(forward_steps) - 1
+        self.goal_position = gt_positions[goal_forward_step].tolist()
 
         self.views.clear()
         self.positions.clear()
         self.rotations.clear()
-
-    @property
-    def waypoints(self):
-        return np.array(self.data[self.episode_id]["locations"])
     
 
 
@@ -141,7 +158,7 @@ def rollout(env: habitat.Env, agent: FixedAgent):
     # if os.path.exists(os.path.join(output_path, f"{scene_id}_{episode_id}", "states.json")):
     #     print(f"Episode {episode_id} already exists")
     #     return 
-    print(f"Episode {episode_id} started")
+    print(f"Episode {trajectory_id} started")
 
     # Get metrics
     info = env.get_metrics()
@@ -188,24 +205,14 @@ def rollout(env: habitat.Env, agent: FixedAgent):
         Image.fromarray(view).save(image_path)
     agent.views.clear()
 
-    # Save actions and positions as json
-    # with open(os.path.join(episode_output_path, "actions.json"), "w") as f:
-    #     json.dump(
-    #         {
-    #             "instruction": instruction_text,
-    #             "actions": agent.actions.tolist(),
-    #             "waypoints": agent.waypoints.tolist(),
-    #         }, f
-    #     )
-
     # Save positions and rotations as json
     with open(os.path.join(episode_output_path, "states.json"), "w") as f:
         # assert len(agent.positions) == len(agent.rotations) == len(agent.actions), \
         #     "Positions, rotations and actions must have the same length"
         try:
-            positions = np.array(agent.positions)[agent.actions == 1].tolist()
-            rotations = np.array(agent.rotations)[agent.actions == 1].tolist()
-            filtered_collisions = np.array(collisions)[agent.actions == 1].tolist()
+            positions = np.array(agent.positions)[agent.actions <= 1].tolist()
+            rotations = np.array(agent.rotations)[agent.actions <= 1].tolist()
+            filtered_collisions = np.array(collisions)[agent.actions <= 1].tolist()
         except Exception as e:
             print(f"Error processing positions and rotations: {e}")
             breakpoint()
@@ -215,7 +222,10 @@ def rollout(env: habitat.Env, agent: FixedAgent):
                 "num_steps": len(positions),
                 "positions": positions,
                 "rotations": rotations,
-                "actions": agent.actions.tolist(),
+                "actions": agent.action_data[str(trajectory_id)]["actions"],
+                "distance": np.linalg.norm(
+                    np.array(agent.goal_position) - np.array(agent.positions[-1])
+                ),
                 "collisions": filtered_collisions,
             }, f
         )
@@ -241,18 +251,19 @@ if __name__ == "__main__":
     # Create simulation environment
     with habitat.Env(config=config, dataset=dataset) as env:
         # breakpoint()
-        gt_data_path = "outputs/self_reflection_test/1LXtFkjw3qL_129/qwen_actions.json"
-        agent = FixedAgent(gt_data_path)
+        action_data_path = "outputs/self_reflection_test/1LXtFkjw3qL_129/qwen_actions.json"
+        gt_data_path = "outputs/self_reflection_test/1LXtFkjw3qL_129/gt.json"
+        agent = FixedAgent(action_data_path, gt_data_path)
 
-        num_episodes = len(agent.data)
+        num_episodes = len(agent.action_data)
         for i in range(num_episodes):
             # Run the agent in the environment
             try:
                 rollout(env, agent)
             except Exception as e:
-                err_f.write(f"Error in episode {env.current_episode.episode_id}: {e}\n")
+                err_f.write(f"Error in episode {env.current_episode.trajectory_id}: {e}\n")
                 err_f.flush()
-                print(f"Error in episode {env.current_episode.episode_id}: {e}")
+                print(f"Error in episode {env.current_episode.trajectory_id}: {e}")
                 # continue
 
             print("===============================================================")
