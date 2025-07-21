@@ -24,7 +24,8 @@ def get_episode(episode_id: str):
             episode_data = train_data["episodes"][i]
             break
     
-    gt_data = train_data_gt[str(episode_num)]
+    # gt_data = train_data_gt[str(episode_num)]
+    gt_data = {episode_num: train_data_gt[str(episode_num)]}
 
     with open(os.path.join(base_path, episode_id, "episode.json"), "w") as f:
         json.dump(episode_data, f)
@@ -89,15 +90,15 @@ if __name__ == "__main__":
     # Example usage
     # episode_id = "1LXtFkjw3qL_129"
 
-    for episode_id in os.listdir(base_path):
-        get_stepwise_episode(episode_id)
+    # for episode_id in os.listdir(base_path):
+    #     get_stepwise_episode(episode_id)
 
     # preview_data = {}
     # preview_data_gt = {}
 
     # episodes = []
-    # for episode_id in os.listdir(base_path):
-    #     episode_data, gt_data = get_episode(episode_id)
+    for episode_id in os.listdir(base_path):
+        episode_data, gt_data = get_episode(episode_id)
     #     episodes.append(episode_data)
 
     #     episode_num = episode_id.split("_")[1]
