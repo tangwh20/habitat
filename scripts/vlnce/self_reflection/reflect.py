@@ -20,7 +20,7 @@ model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
 # default processer
 processor = AutoProcessor.from_pretrained("Qwen/Qwen2.5-VL-7B-Instruct")
 
-
+distance_threshold = 0.5  # meters
 base_path = "/data1/tangwenhao/datasets/vlnce/data/train_old/subtask"
 
 def visualize_repsonse(
@@ -29,33 +29,39 @@ def visualize_repsonse(
     task: str, 
     reasoning: str,
     actions: List[str],
+    distance: float,
+    collisions: List[bool],
     response: str,
     save_path: str,
 ):
     # Create figure
     fig = plt.figure(figsize=(12, 6))
-    grid = gridspec.GridSpec(2, 8, figure=fig)  # 2 rows, 8 columns
+    grid = gridspec.GridSpec(3, 8, figure=fig)  # 2 rows, 8 columns
 
     # Plot navigation images on the top row
     for i, img in enumerate(nav_images):
+        if i >= 8:  # Limit to 8 images
+            break
         ax = fig.add_subplot(grid[0, i])
         ax.imshow(img)
         ax.axis("off")
         ax.set_title(f"Step {i+1}")
 
     # Plot last image on the left
-    ax_context_image = fig.add_subplot(grid[1:2, 0:2])
+    ax_context_image = fig.add_subplot(grid[1:3, 0:2])
     ax_context_image.imshow(context_image)
     ax_context_image.axis("off")
     ax_context_image.set_title("Context Image")
 
     # Plot task + response
-    ax_text = fig.add_subplot(grid[1:2, 2:8])
+    ax_text = fig.add_subplot(grid[1:3, 2:8])
     ax_text.axis("off")
     ax_text.text(
         0,
         0.5,
-        f"Task:\n{task}\nReasoning:\n{reasoning}\nActions:\n{actions}\n\n{response}",
+        f"Task:\n{task}\nReasoning:\n{reasoning}\nActions:\n{actions}\n"
+        f"Final Distance to Goal (threshold:{distance_threshold}m): {distance}m\n"
+        f"Collisions: {collisions}\n\n{response}",
         wrap=True,
         ha="left",
         va="center",
@@ -114,13 +120,21 @@ def generate_reasoning_for_episode(episode_id: str, output_dir: str):
             img_path = os.path.join(qwen_stepwise_path, f"step_{i}", "images", f"{j}.png")
             navigation_images.append(Image.open(img_path))
         
+        # Load final distance
+        with open(os.path.join(qwen_stepwise_path, f"step_{i}", "states.json"), "r") as f:
+            states_data = json.load(f)
+        distance = states_data["distance"]
+        collisions = states_data["collisions"]
+        
         # Generate verdict and explanation from Qwen
         response = generate_response_from_qwen(
             image=context_image,
             task=task_list[i],
             images=navigation_images,
             reasoning=reasoning_list[i],
-            actions=actions_list[i]
+            actions=actions_list[i],
+            distance=distance,
+            collisions=collisions
         )
 
         outputs.append({
@@ -141,6 +155,8 @@ def generate_reasoning_for_episode(episode_id: str, output_dir: str):
             task=task_list[i],
             reasoning=reasoning_list[i],
             actions=actions_list[i],
+            distance=distance,
+            collisions=collisions,
             response=response,
             save_path=save_path
         )
@@ -150,17 +166,8 @@ def generate_reasoning_for_episode(episode_id: str, output_dir: str):
         json.dump(outputs, f, indent=2)
 
 
-def generate_response_from_qwen(image, task, images=None, reasoning=None, actions=None):
+def generate_response_from_qwen(image, task, images=None, reasoning=None, actions=None, distance=None, collisions=None):
     # Build dynamic prompt using the provided image and task
-    # messages = [
-    #     {
-    #         "role": "user",
-    #         "content": [
-    #             {"type": "image", "image": image},
-    #             {"type": "text", "text": f"You are a navigation agent. Given this image and the following goal: '{task}', output a JSON object with the following keys:\n\n\"OBSERVATION\": A description of what you see,\n\"REASONING\": A plan for reaching the goal,\n\"ACTIONS\": A list of exactly 8 actions to take immediately toward the goal.\n\nEach action must be one of: \"FORWARD 0.25M\", \"TURN LEFT 15 DEGREES\", \"TURN RIGHT 15 DEGREES\", or \"STOP\".\n\nReturn a raw JSON string with no commentary or code block markers (such as ```json)."},
-    #         ],
-    #     }
-    # ]
 
     messages = [
         {
@@ -172,10 +179,13 @@ def generate_response_from_qwen(image, task, images=None, reasoning=None, action
                 "- The Goal: A task description that the agent aims to achieve.\n"
                 "- The Agent's Reasoning: The agent's analysis on the observation and reasoning on how to achieve the task.\n"
                 "- The Agent's Actions: A list of actions with corresponding observation images at each step. \n"
+                "- The Result: Final distance to the goal and whether the agent succeeded or failed. "
+                f"(Note: Success is defined as the agent reaching within {distance_threshold} meters of the goal location, and not colliding with any obstacle.)\n\n"
                 "Your task is to analyze the agent's actions and judge its effectiveness. Provide your response as a single JSON object with the following two keys:\n"
                 "\"ANALYSIS\": An analysis of what happened during action execution, and judge on the outcome based on the given task.\n"
                 "\"VERDICT\": Your judgment on whether the agent successfully accomplished the task. Must be one of three strings: \"SUCCESS\", \"FAILURE\", or \"UNSURE\".\n"
                 "\"REFLECTION\": If the verdiction is failure, reflect on what was wrong with the reasoning process or action planning.\n"
+                "Note: If the agent failed to reach the goal, the verdict should be \"FAILURE\". If the agent succeeded, the verdict depends on the analysis of the actions and reasoning.\n"
                 "Ensure your response is a valid JSON object with no additional text or formatting.\n"},
             ]
         },
@@ -189,7 +199,9 @@ def generate_response_from_qwen(image, task, images=None, reasoning=None, action
                 {"type": "image", "image": img} for img in images
             ] + [
                 {"type": "text", "text": f"The agent's reasoning: {reasoning}\n"
-                f"The agent's actions: {actions}\n"}
+                f"The agent's actions: {actions}\n"
+                f"The agent {f'collides with obstacle at step {collisions.index(True)}.' if any(collisions) else 'does not collide with any obstacle.'}"
+                f"The agent {'succeeded' if distance <= distance_threshold and not any(collisions) else 'failed'} to reach the goal, with a final distance of {distance:.2f} meters.\n"}
             ]
         }
     ]
