@@ -158,6 +158,7 @@ def rollout(env: habitat.Env, agent: FixedAgent):
     vis_frames = [frame]
 
     current_step = 0
+    collisions = []
     # Repeat the steps above while agent doesn't reach the goal
     while not env.episode_over:
         # Get the next best action
@@ -169,6 +170,7 @@ def rollout(env: habitat.Env, agent: FixedAgent):
         # Step in the environment
         observations = env.step(action)
         info = env.get_metrics()
+        collisions.append(info["collisions"]["is_collision"])
         observations.pop("instruction")
         frame = observations_to_image(observations, info)
 
@@ -203,10 +205,10 @@ def rollout(env: habitat.Env, agent: FixedAgent):
         try:
             positions = np.array(agent.positions)[agent.actions == 1].tolist()
             rotations = np.array(agent.rotations)[agent.actions == 1].tolist()
+            filtered_collisions = np.array(collisions)[agent.actions == 1].tolist()
         except Exception as e:
             print(f"Error processing positions and rotations: {e}")
             breakpoint()
-            
         json.dump(
             {
                 "instruction": instruction_text,
@@ -214,6 +216,7 @@ def rollout(env: habitat.Env, agent: FixedAgent):
                 "positions": positions,
                 "rotations": rotations,
                 "actions": agent.actions.tolist(),
+                "collisions": filtered_collisions,
             }, f
         )
 
@@ -258,5 +261,4 @@ if __name__ == "__main__":
 
     err_f.close()
     print("Finished all episodes")
-        
         
