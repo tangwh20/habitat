@@ -54,7 +54,10 @@ class FixedAgent(Agent):
 
     def reset(self, episode):
         self.episode_id = str(episode.trajectory_id)
-        self.actions = np.array(self.data[self.episode_id]["actions"])
+        actions = self.data[self.episode_id]["actions"]
+        if actions[-1] != 0:  # Ensure the last action is STOP
+            actions.append(0)
+        self.actions = np.array(actions)
         self.forward_steps = np.where(self.actions == 1)[0]
 
         self.views.clear()
@@ -197,8 +200,13 @@ def rollout(env: habitat.Env, agent: FixedAgent):
     with open(os.path.join(episode_output_path, "states.json"), "w") as f:
         # assert len(agent.positions) == len(agent.rotations) == len(agent.actions), \
         #     "Positions, rotations and actions must have the same length"
-        positions = np.array(agent.positions)[agent.actions == 1].tolist()
-        rotations = np.array(agent.rotations)[agent.actions == 1].tolist()
+        try:
+            positions = np.array(agent.positions)[agent.actions == 1].tolist()
+            rotations = np.array(agent.rotations)[agent.actions == 1].tolist()
+        except Exception as e:
+            print(f"Error processing positions and rotations: {e}")
+            breakpoint()
+            
         json.dump(
             {
                 "instruction": instruction_text,
