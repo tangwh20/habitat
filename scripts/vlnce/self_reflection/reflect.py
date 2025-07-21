@@ -168,11 +168,14 @@ def generate_response_from_qwen(image, task, images=None, reasoning=None, action
             "content": [
                 {"type": "text", "text": "You are an AI assistant that evaluates a visual navigation agent's performance.\n"
                 "You will be given:\n"
-                "- The Goal: A context image and a task description.\n"
-                "- The Agent's Trajectory: A sequence of steps detailing the agent's reasoning, actions, and resulting visual observations.\n"
-                "Your task is to analyze the agent's trajectory and judge its effectiveness. Provide your response as a single JSON object with the following two keys:\n"
-                "\"VERDICT\": Your judgment on the outcome. Must be one of three strings: \"SUCCESS\", \"FAILURE\", or \"UNSURE\".\n"
-                "\"EXPLANATION\": A detailed explanation for your verdict, analyzing the agent's reasoning and actions in the context of its observations and the overall goal.\n"
+                "- The Context: A image of the agent's current observation.\n"
+                "- The Goal: A task description that the agent aims to achieve.\n"
+                "- The Agent's Reasoning: The agent's analysis on the observation and reasoning on how to achieve the task.\n"
+                "- The Agent's Actions: A list of actions with corresponding observation images at each step. \n"
+                "Your task is to analyze the agent's actions and judge its effectiveness. Provide your response as a single JSON object with the following two keys:\n"
+                "\"ANALYSIS\": An analysis of what happened during action execution, and judge on the outcome based on the given task.\n"
+                "\"VERDICT\": Your judgment on whether the agent successfully accomplished the task. Must be one of three strings: \"SUCCESS\", \"FAILURE\", or \"UNSURE\".\n"
+                "\"REFLECTION\": If the verdiction is failure, reflect on what was wrong with the reasoning process or action planning.\n"
                 "Ensure your response is a valid JSON object with no additional text or formatting.\n"},
             ]
         },
@@ -180,7 +183,7 @@ def generate_response_from_qwen(image, task, images=None, reasoning=None, action
             "role": "user",
             "content": [
                 {"type": "image", "image": image},
-                {"type": "text", "text": f"The navigation agent is given this image and the following goal: '{task}'.\n"
+                {"type": "text", "text": f"The navigation agent is given this current observation image and the following goal: '{task}'.\n"
                 "The agent's trajectory is as follows:\n"},
             ] + [
                 {"type": "image", "image": img} for img in images
