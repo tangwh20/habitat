@@ -2,6 +2,7 @@ import os
 import git
 import json
 import gzip
+import copy
 import quaternion
 import numpy as np
 from PIL import Image
@@ -54,7 +55,7 @@ class FixedAgent(Agent):
         return action
 
     def reset(self, episode):
-        actions = self.action_data[str(episode.trajectory_id)]["actions"]
+        actions = copy.deepcopy(self.action_data[str(episode.trajectory_id)]["actions"])
         if 0 in actions:
             actions = actions[:actions.index(0)]
         actions.append(0)  # Ensure the last action is STOP
@@ -269,14 +270,19 @@ def rollout(env: habitat.Env, agent: FixedAgent):
         # except Exception as e:
         #     print(f"Error processing positions and rotations: {e}")
         #     breakpoint()
+        agent_raw_actions = agent.action_data[str(trajectory_id)]["actions"]
+        traj_length = len(agent_raw_actions)
+        positions = agent.positions[:traj_length]
+        rotations = agent.rotations[:traj_length]
+        collisions = collisions[:traj_length]
         goal_relative_position_first, goal_relative_position_last = agent.get_goal_relative_position()
         json.dump(
             {
                 "instruction": instruction_text,
-                "num_steps": len(agent.positions),
-                "positions": agent.positions,
-                "rotations": agent.rotations,
-                "actions": agent.action_data[str(trajectory_id)]["actions"],
+                "num_steps": traj_length,
+                "positions": positions,
+                "rotations": rotations,
+                "actions": agent_raw_actions,
                 "goal_relative_position_first": goal_relative_position_first,
                 "goal_relative_position_last": goal_relative_position_last,
                 "collisions": collisions,
