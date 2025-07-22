@@ -125,7 +125,11 @@ def generate_response_from_qwen(image, task):
             "role": "user",
             "content": [
                 {"type": "image", "image": image},
-                {"type": "text", "text": f"You are a navigation agent. Given this image and the following goal: '{task}', output a JSON object with the following keys:\n\n\"OBSERVATION\": A description of what you see,\n\"REASONING\": A plan for reaching the goal,\n\"ACTIONS\": A list of exactly 8 actions to take immediately toward the goal.\n\nEach action must be one of: \"FORWARD 0.25M\", \"TURN LEFT 15 DEGREES\", \"TURN RIGHT 15 DEGREES\", or \"STOP\".\n\nReturn a raw JSON string with no commentary or code block markers (such as ```json)."},
+                {"type": "text", "text": f"You are a navigation agent. Given this image and the following goal: '{task}', "
+                 "output a JSON object with the following keys:\n\n"
+                 "\"OBSERVATION\": A description of what you see,\n"
+                 "\"REASONING\": A plan for reaching the goal,\n"
+                 "\"ACTIONS\": A list of exactly 8 actions to take immediately toward the goal.\n\nEach action must be one of: \"FORWARD 0.25M\", \"TURN LEFT 15 DEGREES\", \"TURN RIGHT 15 DEGREES\", or \"STOP\".\n\nReturn a raw JSON string with no commentary or code block markers (such as ```json)."},
             ],
         }
     ]

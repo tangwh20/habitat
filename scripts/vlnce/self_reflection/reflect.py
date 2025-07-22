@@ -178,13 +178,15 @@ def generate_response_from_qwen(image, task, images=None, reasoning=None, action
                 "- The Context: A image of the agent's current observation.\n"
                 "- The Goal: A task description that the agent aims to achieve.\n"
                 "- The Agent's Reasoning: The agent's analysis on the observation and reasoning on how to achieve the task.\n"
-                "- The Agent's Actions: A list of actions with corresponding observation images at each step. \n"
+                "- The Agent's Actions: A list of actions with corresponding observation images at each step. Each action is one of: \"FORWARD 0.25M\", \"TURN LEFT 15 DEGREES\", \"TURN RIGHT 15 DEGREES\", or \"STOP\".\n"
                 "- The Result: Whether the agent succeeded or failed. "
                 f"(Note: Success is defined as the agent reaching within {distance_threshold} meters of the goal location, and not colliding with any obstacle.)\n\n"
-                "Your task is to analyze the agent's actions and judge its effectiveness. Provide your response as a single JSON object with the following two keys:\n"
+                "Your task is to analyze the agent's actions and judge its effectiveness. Provide your response as a single JSON object with the following keys:\n"
                 "\"ANALYSIS\": An analysis of what happened during action execution, and judge on the outcome based on the given task and the result.\n"
                 "\"VERDICT\": Your judgment on whether the agent successfully accomplished the task. Must be one of three strings: \"SUCCESS\", \"FAILURE\", or \"UNSURE\".\n"
                 "\"REFLECTION\": If the verdiction is failure, reflect on what was wrong with the reasoning process or action planning.\n"
+                "\"CORRECT_REASONING\": If the verdiction is failure, rewrite the correct reasoning to achieve the goal.\n"
+                "\"CORRECT_ACTIONS\": If the verdiction is failure, the correct list of 8 actions to achieve the goal according to the correct reasoning.\n"
                 "Note: If the agent failed to reach the goal, the verdict must be \"FAILURE\".\n"
                 "Ensure your response is a valid JSON object with no additional text or formatting.\n"},
             ]
