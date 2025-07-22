@@ -22,6 +22,7 @@ from habitat.utils.visualizations.utils import (
 
 
 STEP_LENGTH = 8
+TURN_ANGLE = np.pi / 12 # 15 degrees in radians
 
 
 class FixedAgent(Agent):
@@ -51,14 +52,6 @@ class FixedAgent(Agent):
         else:
             action = 0
         return action
-    
-    def update_state(self, agent_state):
-        position = agent_state.position.tolist()
-        self.positions.append(position)
-
-        rotation = quaternion.as_float_array(agent_state.rotation)
-        rotation = np.roll(rotation, -1).tolist()  # Convert from quaternion to habitat sim format
-        self.rotations.append(rotation)
 
     def reset(self, episode):
         actions = self.action_data[str(episode.trajectory_id)]["actions"]
@@ -85,6 +78,38 @@ class FixedAgent(Agent):
         self.positions.clear()
         self.rotations.clear()
     
+    def update_state(self, agent_state):
+        position = agent_state.position.tolist()
+        self.positions.append(position)
+
+        rotation = quaternion.as_float_array(agent_state.rotation)
+        rotation = np.roll(rotation, -1).tolist()  # Convert from quaternion to habitat sim format
+        self.rotations.append(rotation)
+
+    def get_goal_relative_position(self):
+        positions = np.array(self.positions)[:, [0, 2]]
+        positions[:, 1] = -positions[:, 1]
+        goal_position = np.array(self.goal_position)[[0, 2]]
+        goal_position[1] = -goal_position[1]
+        relative_position = goal_position - positions[-1]
+
+        forward_steps = np.where(np.array(self.actions) == 1)[0]
+        last_forward_step = forward_steps[-1]
+        last_forward_heading = positions[-1] - positions[last_forward_step]
+        last_forward_yaw = np.arctan2(last_forward_heading[1], last_forward_heading[0])
+        last_turning = self.actions[last_forward_step + 1:]
+        last_yaw = last_forward_yaw + np.sum(last_turning == 2) * TURN_ANGLE - np.sum(last_turning == 3) * TURN_ANGLE
+
+        rot_matrix = np.array([
+            [np.cos(last_yaw), np.sin(last_yaw)],
+            [-np.sin(last_yaw), np.cos(last_yaw)]
+        ])
+        relative_position = np.dot(rot_matrix, relative_position)
+        # breakpoint()
+
+        return relative_position.tolist()
+
+
 
 
 repo = git.Repo(".", search_parent_directories=True)
@@ -233,9 +258,7 @@ def rollout(env: habitat.Env, agent: FixedAgent):
                 "positions": positions,
                 "rotations": rotations,
                 "actions": agent.action_data[str(trajectory_id)]["actions"],
-                "distance": np.linalg.norm(
-                    np.array(agent.goal_position) - np.array(agent.positions[-1])
-                ),
+                "goal_position": agent.get_goal_relative_position(),
                 "collisions": filtered_collisions,
             }, f
         )
