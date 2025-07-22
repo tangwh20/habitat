@@ -244,22 +244,22 @@ def rollout(env: habitat.Env, agent: FixedAgent):
     with open(os.path.join(episode_output_path, "states.json"), "w") as f:
         # assert len(agent.positions) == len(agent.rotations) == len(agent.actions), \
         #     "Positions, rotations and actions must have the same length"
-        try:
-            positions = np.array(agent.positions)[agent.actions <= 1].tolist()
-            rotations = np.array(agent.rotations)[agent.actions <= 1].tolist()
-            filtered_collisions = np.array(collisions)[agent.actions <= 1].tolist()
-        except Exception as e:
-            print(f"Error processing positions and rotations: {e}")
-            breakpoint()
+        # try:
+        #     positions = np.array(agent.positions)[agent.actions <= 1].tolist()
+        #     rotations = np.array(agent.rotations)[agent.actions <= 1].tolist()
+        #     filtered_collisions = np.array(collisions)[agent.actions <= 1].tolist()
+        # except Exception as e:
+        #     print(f"Error processing positions and rotations: {e}")
+        #     breakpoint()
         json.dump(
             {
                 "instruction": instruction_text,
-                "num_steps": len(positions),
-                "positions": positions,
-                "rotations": rotations,
+                "num_steps": len(agent.positions),
+                "positions": agent.positions,
+                "rotations": agent.rotations,
                 "actions": agent.action_data[str(trajectory_id)]["actions"],
                 "goal_position": agent.get_goal_relative_position(),
-                "collisions": filtered_collisions,
+                "collisions": collisions,
             }, f
         )
 
