@@ -109,6 +109,16 @@ def load_dataset(dir_path, config_path):
                 "seed": 100,
             }
         )
+        config.habitat.simulator.habitat_sim_v0.update(
+            {
+                "allow_sliding": False,
+            }
+        )
+        config.habitat.simulator.agents.main_agent.update(
+            {
+                "radius": 0.3, # collision radius
+            }
+        )
         config.habitat.task.measurements.update(
             {
                 "top_down_map": TopDownMapMeasurementConfig(
