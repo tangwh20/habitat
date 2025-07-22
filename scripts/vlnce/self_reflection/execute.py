@@ -93,23 +93,23 @@ class FixedAgent(Agent):
         goal_position[1] = -goal_position[1]
 
         # ===== Relative to the last step =====
-        # relative_position = goal_position - positions[-1]
+        relative_position_last = goal_position - positions[-1]
 
-        # forward_steps = np.where(np.array(self.actions) == 1)[0]
-        # last_forward_step = forward_steps[-1]
-        # last_forward_heading = positions[-1] - positions[last_forward_step]
-        # last_forward_yaw = np.arctan2(last_forward_heading[1], last_forward_heading[0])
-        # last_turning = self.actions[last_forward_step + 1:]
-        # last_yaw = last_forward_yaw + np.sum(last_turning == 2) * TURN_ANGLE - np.sum(last_turning == 3) * TURN_ANGLE
+        forward_steps = np.where(np.array(self.actions) == 1)[0]
+        last_forward_step = forward_steps[-1]
+        last_forward_heading = positions[-1] - positions[last_forward_step]
+        last_forward_yaw = np.arctan2(last_forward_heading[1], last_forward_heading[0])
+        last_turning = self.actions[last_forward_step + 1:]
+        last_yaw = last_forward_yaw + np.sum(last_turning == 2) * TURN_ANGLE - np.sum(last_turning == 3) * TURN_ANGLE
 
-        # rot_matrix = np.array([
-        #     [np.cos(last_yaw), np.sin(last_yaw)],
-        #     [-np.sin(last_yaw), np.cos(last_yaw)]
-        # ])
-        # relative_position = np.dot(rot_matrix, relative_position)
+        rot_matrix = np.array([
+            [np.cos(last_yaw), np.sin(last_yaw)],
+            [-np.sin(last_yaw), np.cos(last_yaw)]
+        ])
+        relative_position_last = np.dot(rot_matrix, relative_position_last)
 
         # ===== Relative to the first step =====
-        relative_position = goal_position - positions[0]
+        relative_position_first = goal_position - positions[0]
 
         forward_steps = np.where(np.array(self.actions) == 1)[0]
         first_forward_step = forward_steps[0] + 1
@@ -122,10 +122,10 @@ class FixedAgent(Agent):
             [np.cos(first_yaw), np.sin(first_yaw)],
             [-np.sin(first_yaw), np.cos(first_yaw)]
         ])
-        relative_position = np.dot(rot_matrix, relative_position)
+        relative_position_first = np.dot(rot_matrix, relative_position_first)
         # breakpoint()
 
-        return relative_position.tolist()
+        return relative_position_first.tolist(), relative_position_last.tolist()
 
 
 
@@ -269,6 +269,7 @@ def rollout(env: habitat.Env, agent: FixedAgent):
         # except Exception as e:
         #     print(f"Error processing positions and rotations: {e}")
         #     breakpoint()
+        goal_relative_position_first, goal_relative_position_last = agent.get_goal_relative_position()
         json.dump(
             {
                 "instruction": instruction_text,
@@ -276,7 +277,8 @@ def rollout(env: habitat.Env, agent: FixedAgent):
                 "positions": agent.positions,
                 "rotations": agent.rotations,
                 "actions": agent.action_data[str(trajectory_id)]["actions"],
-                "goal_position": agent.get_goal_relative_position(),
+                "goal_relative_position_first": goal_relative_position_first,
+                "goal_relative_position_last": goal_relative_position_last,
                 "collisions": collisions,
             }, f
         )
