@@ -91,18 +91,36 @@ class FixedAgent(Agent):
         positions[:, 1] = -positions[:, 1]
         goal_position = np.array(self.goal_position)[[0, 2]]
         goal_position[1] = -goal_position[1]
-        relative_position = goal_position - positions[-1]
+
+        # ===== Relative to the last step =====
+        # relative_position = goal_position - positions[-1]
+
+        # forward_steps = np.where(np.array(self.actions) == 1)[0]
+        # last_forward_step = forward_steps[-1]
+        # last_forward_heading = positions[-1] - positions[last_forward_step]
+        # last_forward_yaw = np.arctan2(last_forward_heading[1], last_forward_heading[0])
+        # last_turning = self.actions[last_forward_step + 1:]
+        # last_yaw = last_forward_yaw + np.sum(last_turning == 2) * TURN_ANGLE - np.sum(last_turning == 3) * TURN_ANGLE
+
+        # rot_matrix = np.array([
+        #     [np.cos(last_yaw), np.sin(last_yaw)],
+        #     [-np.sin(last_yaw), np.cos(last_yaw)]
+        # ])
+        # relative_position = np.dot(rot_matrix, relative_position)
+
+        # ===== Relative to the first step =====
+        relative_position = goal_position - positions[0]
 
         forward_steps = np.where(np.array(self.actions) == 1)[0]
-        last_forward_step = forward_steps[-1]
-        last_forward_heading = positions[-1] - positions[last_forward_step]
-        last_forward_yaw = np.arctan2(last_forward_heading[1], last_forward_heading[0])
-        last_turning = self.actions[last_forward_step + 1:]
-        last_yaw = last_forward_yaw + np.sum(last_turning == 2) * TURN_ANGLE - np.sum(last_turning == 3) * TURN_ANGLE
+        first_forward_step = forward_steps[0] + 1
+        first_forward_heading = positions[first_forward_step] - positions[0]
+        first_forward_yaw = np.arctan2(first_forward_heading[1], first_forward_heading[0])
+        first_turning = self.actions[:first_forward_step]
+        first_yaw = first_forward_yaw - np.sum(first_turning == 2) * TURN_ANGLE + np.sum(first_turning == 3) * TURN_ANGLE
 
         rot_matrix = np.array([
-            [np.cos(last_yaw), np.sin(last_yaw)],
-            [-np.sin(last_yaw), np.cos(last_yaw)]
+            [np.cos(first_yaw), np.sin(first_yaw)],
+            [-np.sin(first_yaw), np.cos(first_yaw)]
         ])
         relative_position = np.dot(rot_matrix, relative_position)
         # breakpoint()
