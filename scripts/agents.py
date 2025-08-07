@@ -61,8 +61,7 @@ class FixedAgent(Agent):
         position = agent_state.position.tolist()
         self.positions.append(position)
 
-        rotation = quaternion.as_float_array(agent_state.rotation)
-        rotation = np.roll(rotation, -1).tolist()  # Convert from quaternion to habitat sim format
+        rotation = quaternion.as_float_array(agent_state.rotation).tolist()
         self.rotations.append(rotation)
 
     # @property
