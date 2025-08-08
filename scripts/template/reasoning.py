@@ -5,7 +5,7 @@ INTRO_REASONING = (
     "1. High-Level Task: The main objective of your journey (e.g., 'find the kitchen').\n"
     "2. Navigation History: A brief summary of your recent movements (e.g., 'just turned left into the hallway').\n"
     "3. Current View: An image of what is directly in front of you.\n"
-    "4. Reference Instruction: A specific low-level command (e.g., `turn_right(30)`). This is only a hint to help you understand the intended direction.\n"
+    "4. Reference Instruction: A specific low-level command (e.g., `turn right`). This is only a hint to help you understand the intended direction.\n"
     "Your task is to generate a brief reasoning for your next physical move based on the Current View, Navigation History, and High-Level Task.\n"
 )
 
@@ -34,21 +34,9 @@ RESPONSE_TEMPLATE_REASONING = (
 )
 
 
-# ===== Format Reasoning Templates =====
-FORMAT_REASONING = [
-    "Okay, I just came out of the meeting room, and the task is to find the elevator. This hallway ahead seems like the right way, so I'll keep moving forward."
-    "I was heading straight down the corridor, but now there's a chair blocking my path. Hmm, I guess I'll need to sidestep to the right where it's clear to get around it."
-    "I've been following this wall to find the kitchen, and now I see a doorway on my left. That looks like the entrance I need, so I'll turn and go through it."
-]
-
-
 # ===== Summary =====
 TEMPLATE_REASONING = (
     INTRO_REASONING
     + REMINDER_REASONING
     + RESPONSE_TEMPLATE_REASONING
-)
-
-EXAMPLE_REASONING = "Examples: \n" + "\n".join(
-    [f"{i}. {reasoning}" for i, reasoning in enumerate(FORMAT_REASONING)]
 )

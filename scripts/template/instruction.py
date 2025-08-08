@@ -86,14 +86,6 @@ TEMPLATE_INSTRUCTION = (
     + RESPONSE_TEMPALTE_INSTRUCTION
 )
 
-# EXAMPLE_INSTRUCTION_NO_OBJECT = "Examples: \n" + "\n".join(
-#     [f"{i}. {instruction}" for i, instruction in enumerate(FORMAT_INSTRUCTION_NO_OBJECT)]
-# )
-
-# EXAMPLE_INSTRUCTION_OBJECT = "Examples: \n" + "\n".join(
-#     [f"{i}. {instruction}" for i, instruction in enumerate(FORMAT_INSTRUCTION_OBJECT)]
-# )
-
 EXAMPLE_INSTRUCTION = "Examples with target object: \n" + "\n".join(
     [f"{i}. {instruction}" for i, instruction in enumerate(FORMAT_INSTRUCTION_OBJECT)]
 ) + "\n\n" + "Examples without target object: \n" + "\n".join(
