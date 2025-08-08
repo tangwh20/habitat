@@ -39,6 +39,7 @@ class Task:
             self, 
             task_name: str, 
             agent: FixedAgent = None, 
+            split_num: int = None,
             scene_name: str = None,
             output_path: str = None,
             save_video: bool = False,
@@ -47,6 +48,7 @@ class Task:
         assert task_name in ["vlnce", "objectnav"], "Invalid task name"
         self.task_name = task_name
         self.agent = agent
+        self.split_num = split_num
         self.scene_name = scene_name
         self.output_path = output_path
         self.save_video = save_video
@@ -68,7 +70,10 @@ class Task:
             if self.task_name == "vlnce":
                 dataset_path = self.config.habitat.dataset.data_path
                 dataset_path = dataset_path.replace("{split}", self.config.habitat.dataset.split)
-                gt_path = dataset_path.replace(".json.gz", "_gt.json.gz")
+                if self.split_num is None:
+                    gt_path = dataset_path.replace(".json.gz", "_gt.json.gz")
+                else:
+                    gt_path = dataset_path.replace(f"_{self.split_num}.json.gz", "_gt.json.gz")
             elif self.task_name == "objectnav":
                 gt_path = None
             self.agent = FixedAgent(self.task_name, data_path=gt_path)
@@ -113,6 +118,11 @@ class Task:
                 config.habitat.dataset.update({
                     "data_path": "data/datasets/objectnav/mp3d/v1/{split}/content/" + self.scene_name + ".json.gz",
                 }) # Change this if needed
+            if self.task_name == "vlnce" and self.split_num is not None:
+                config.habitat.dataset.update({
+                    "data_path": "data/datasets/vln/mp3d/r2r/v1/{split}/{split}_" + str(self.split_num) + ".json.gz",
+                })
+                
 
         # Create dataset
         dataset = habitat.make_dataset(
@@ -124,11 +134,11 @@ class Task:
     def rollout(self):
         # Load the first episode and reset agent
         observations = self.env.reset()
-        episode_id = self.env.current_episode.episode_id
+        episode_id = str(self.env.current_episode.episode_id)
         scene_id = os.path.basename(self.env.current_episode.scene_id).split('.')[0]
         self.agent.reset(self.env.current_episode)
 
-        if os.path.exists(os.path.join(self.output_path, f"{scene_id}_{episode_id}")):
+        if os.path.exists(os.path.join(self.output_path, scene_id, episode_id)):
             print(f"Episode {episode_id} already exists")
             return 
         # print(f"Episode {episode_id} started")
@@ -226,6 +236,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Run Habitat task rollout")
     parser.add_argument("--task_name", type=str, choices=["vlnce", "objectnav"], required=True, help="Task name")
+    parser.add_argument("--split_num", type=int, default=None, help="Split number for vlnce task. If not provided, will process the entire dataset.")
     parser.add_argument("--scene_name", type=str, default=None, help="Scene name for objectnav task. If not provided, will process all scenes in the dataset.")
     parser.add_argument("--output_path", type=str, default=None, help="Output path for results")
     parser.add_argument("--save_video", action="store_true", help="Save video of the rollout")
@@ -234,7 +245,12 @@ if __name__ == "__main__":
 
     # Create error log file
     import time
-    log_filepath = f"logs/objectnav/parallel_0806/{args.scene_name}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log"
+    if args.split_num is not None:
+        log_filepath = f"logs/{args.task_name}/parallel_{time.strftime('%m%d')}/{args.split_num}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log"
+    elif args.scene_name is not None:
+        log_filepath = f"logs/{args.task_name}/parallel_{time.strftime('%m%d')}/{args.scene_name}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log"
+    else:
+        log_filepath = f"logs/{args.task_name}/{time.strftime('%Y-%m-%d_%H-%M-%S')}.log"
     os.makedirs(os.path.dirname(log_filepath), exist_ok=True)
     log_f = open(log_filepath, "a")
     log_f.write(f"Start processing scene {args.scene_name} at {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
