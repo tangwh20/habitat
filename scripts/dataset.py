@@ -11,9 +11,10 @@ from chat_wrapper import ChatGPT, PromptCounter
 
 from template import TEMPLATES, EXAMPLES, ACTION_MAP
 
-MODEL_NAME = "gpt-4.1-mini"
+MODEL_NAME = "gpt-4.1-mini"  # Change to your desired model name
 ACTION_LENGTH = 8
 BASE_PATH = "/home/tangwenhao/Workspace/habitat"
+DATA_BASE_PATH = "/data1/tangwenhao/datasets"
 
 
 class Chats:
@@ -247,7 +248,34 @@ class Episode:
         # image_index = np.arange(0, num_total_images, stride)
 
         if self.task_type == "vlnce":
-            pass
+            instruction = self.instruction
+            instruction = re.sub("[^A-Za-z0-9. ]+", "", instruction)
+            subtasks = re.split(r'[.\r\n]', instruction)
+            subtasks = [sub.strip() for sub in subtasks if len(sub.strip()) > 0]
+
+            for i in range(num_total_images):
+                image = self.images[i]
+                history = self.storage["history"][i-1] if i > 0 else ""
+                action = ACTION_MAP[self.actions[i-1]] if i > 0 else "START"
+                last_subtask = self.storage["task"][i-1] if i > 0 else ""
+                user_prompt = f"Given the previous history: {history}\n" + \
+                              f"Given the last action: {action}\n" + \
+                              f"Given the last subtask: {last_subtask}\n" + \
+                              f"Given the predefined subtasks: {subtasks}\n"
+                response, usage = self.chats.history_chat.send_message(image, user_prompt)
+                self.counter.add_usage(usage)
+                # print(f"History chat usage: {self.counter.get_usage()}")
+
+                try:
+                    output = json.loads(response)
+                    self.storage["history"][i] = output["history"]
+                    self.storage["task"][i] = output["current_task"]
+                except json.JSONDecodeError:
+                    print(f"Error decoding JSON response at index {i}: {response}")
+                    self.storage["history"][i] = response.strip()
+                    self.storage["task"][i] = response.strip()
+                print(f"Finished generating history for image {i+1}/{num_total_images}")
+
         elif self.task_type == "objectnav":
             self.storage["task"] = [f"Find the {self.object_goal}"] * num_total_images
 
@@ -355,26 +383,31 @@ class Episode:
 
 if __name__ == "__main__":
     # Example usage
+    task_type = "vlnce"  # "vlnce" or "objectnav"
+
     chats = Chats()
     chats.split_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["split"])
-    chats.history_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["history"])
+    if task_type == "vlnce":
+        chats.history_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["history_task"])
+    elif task_type == "objectnav":
+        chats.history_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["history"])
     chats.instruction_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["instruction"])
     chats.reasoning_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["reasoning"])
     chats.reflection_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["reflection"])
 
 
-    episode = Episode(task_type="objectnav", episode_id="1LXtFkjw3qL_357", chats=chats)
-    episode.load_data(input_data_type="base", data_path=os.path.join(BASE_PATH, "outputs/data/objectnav/data_raw"))
-    episode.load_data(input_data_type="task", data_path=os.path.join(BASE_PATH, "outputs/data/objectnav/data_task"))
+    episode = Episode(task_type=task_type, episode_id="1pXnuDYAj8r_1524", chats=chats)
+    episode.load_data(input_data_type="base", data_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_raw"))
+    episode.load_data(input_data_type="task", data_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_task"))
     # episode.generate_trajectory()
     # episode.generate_task_history()
 
-    idx = 20
+    idx = 34
     episode.generate_onestep_instruction(idx=idx)
     episode.generate_onestep_reasoning(idx=idx)
     episode.generate_onestep_reflection(idx=idx)
 
-    episode.save_data(output_data_type="task", output_path=os.path.join(BASE_PATH, "outputs/data/objectnav/data_task"))
-    episode.visualize_data(step=idx, visualize_path=os.path.join(BASE_PATH, "outputs/data/objectnav/visualize"))
+    episode.save_data(output_data_type="task", output_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_task"))
+    episode.visualize_data(step=idx, visualize_path=os.path.join(DATA_BASE_PATH, f"{task_type}/visualize"))
 
     print(f"Usage: {episode.counter.get_usage()}")

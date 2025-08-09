@@ -1,5 +1,5 @@
 from .split import TEMPLATE_SPLIT
-from .history import TEMPLATE_HISTORY
+from .history import TEMPLATE_HISTORY, TEMPLATE_HISTORY_TASK
 from .instruction import TEMPLATE_INSTRUCTION, EXAMPLE_INSTRUCTION
 from .reasoning import TEMPLATE_REASONING
 from .reflection import TEMPLATE_REFLECTION
@@ -7,6 +7,7 @@ from .reflection import TEMPLATE_REFLECTION
 TEMPLATES = {
     "split": TEMPLATE_SPLIT,
     "history": TEMPLATE_HISTORY,
+    "history_task": TEMPLATE_HISTORY_TASK,
     "instruction": TEMPLATE_INSTRUCTION,
     "reasoning": TEMPLATE_REASONING,
     "reflection": TEMPLATE_REFLECTION,
