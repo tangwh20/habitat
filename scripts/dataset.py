@@ -242,62 +242,67 @@ class Episode:
         self.storage["instruction"][idx] = instruction_without_object
         self.storage["decision"][idx] = instruction_with_object
 
+    def _split_trajectory_for_vlnce(self):
+        # === Split trajectory ===
+        num_total_images = len(self.images)
+        stride = max(2, num_total_images // 50 + 1)
+        image_list = [
+            self.images[i] for i in range(0, num_total_images, stride)
+        ]
+        image_index = np.arange(0, num_total_images, stride)
+
+        instruction = self.instruction
+        instruction = re.sub("[^A-Za-z0-9. ]+", "", instruction)
+        subtasks = re.split(r'[.\r\n]', instruction)
+        subtasks = [sub.strip() for sub in subtasks if len(sub.strip()) > 0]
+
+        user_prompt = (
+            f"Given {len(image_list)} images and {len(subtasks)} sub-instructions. \n" +
+            f"Instructions: {subtasks}. \n"
+        )
+        response, usage = self.chats.split_chat.send_message(image_list, user_prompt)
+        self.counter.add_usage(usage)
+        # print(f"Split chat usage: {self.counter.get_usage()}")
+
+        output = json.loads(response)
+        start_steps = output["start_step"]
+        get_step = lambda step: int(step) if int(step) < len(image_list) else len(image_list) - 1
+        start_steps = [image_index[get_step(step)] for step in start_steps]
+
+        return subtasks, start_steps
+
     def generate_task_history(self):
         num_total_images = len(self.images)
-        # stride = max(2, num_total_images // 50 + 1)
-        # image_index = np.arange(0, num_total_images, stride)
 
         if self.task_type == "vlnce":
-            instruction = self.instruction
-            instruction = re.sub("[^A-Za-z0-9. ]+", "", instruction)
-            subtasks = re.split(r'[.\r\n]', instruction)
-            subtasks = [sub.strip() for sub in subtasks if len(sub.strip()) > 0]
-
-            for i in range(num_total_images):
-                image = self.images[i]
-                history = self.storage["history"][i-1] if i > 0 else ""
-                action = ACTION_MAP[self.actions[i-1]] if i > 0 else "START"
-                last_subtask = self.storage["task"][i-1] if i > 0 else ""
-                user_prompt = f"Given the previous history: {history}\n" + \
-                              f"Given the last action: {action}\n" + \
-                              f"Given the last subtask: {last_subtask}\n" + \
-                              f"Given the predefined subtasks: {subtasks}\n"
-                response, usage = self.chats.history_chat.send_message(image, user_prompt)
-                self.counter.add_usage(usage)
-                # print(f"History chat usage: {self.counter.get_usage()}")
-
-                try:
-                    output = json.loads(response)
-                    self.storage["history"][i] = output["history"]
-                    self.storage["task"][i] = output["current_task"]
-                except json.JSONDecodeError:
-                    print(f"Error decoding JSON response at index {i}: {response}")
-                    self.storage["history"][i] = response.strip()
-                    self.storage["task"][i] = response.strip()
-                print(f"Finished generating history for image {i+1}/{num_total_images}")
-
+            subtask_list, start_steps = self._split_trajectory_for_vlnce()
+            subtask = []
+            for i in range(len(start_steps)):
+                repeat_times = start_steps[i + 1] - start_steps[i] if i + 1 < len(start_steps) else num_total_images - start_steps[i]
+                subtask.extend([subtask_list[i]] * repeat_times)
+            self.storage["task"] = subtask
         elif self.task_type == "objectnav":
             self.storage["task"] = [f"Find the {self.object_goal}"] * num_total_images
 
-            for i in range(num_total_images):
-                image = self.images[i]
-                history = self.storage["history"][i-1] if i > 0 else ""
-                action = ACTION_MAP[self.actions[i-1]] if i > 0 else "START"
-                task = self.storage["task"][i]
-                user_prompt = f"Given the previous history: {history}\n" + \
-                              f"Given the last action: {action}\n" + \
-                              f"Given the overall task: {task}\n"
-                response, usage = self.chats.history_chat.send_message(image, user_prompt)
-                self.counter.add_usage(usage)
-                # print(f"History chat usage: {self.counter.get_usage()}")
+        for i in range(num_total_images):
+            image = self.images[i]
+            history = self.storage["history"][i-1] if i > 0 else ""
+            action = ACTION_MAP[self.actions[i-1]] if i > 0 else "START"
+            task = self.storage["task"][i]
+            user_prompt = f"Given the previous history: {history}\n" + \
+                          f"Given the last action: {action}\n" + \
+                          f"Given the overall task: {task}\n"
+            response, usage = self.chats.history_chat.send_message(image, user_prompt)
+            self.counter.add_usage(usage)
+            # print(f"History chat usage: {self.counter.get_usage()}")
 
-                try:
-                    output = json.loads(response)
-                    self.storage["history"][i] = output["history"]
-                except json.JSONDecodeError:
-                    print(f"Error decoding JSON response at index {i}: {response}")
-                    self.storage["history"][i] = response.strip()
-                print(f"Finished generating history for image {i+1}/{num_total_images}")
+            try:
+                output = json.loads(response)
+                self.storage["history"][i] = output["history"]
+            except json.JSONDecodeError:
+                print(f"Error decoding JSON response at index {i}: {response}")
+                self.storage["history"][i] = response.strip()
+            print(f"Finished generating history for image {i+1}/{num_total_images}")
 
     def generate_onestep_reasoning(self, idx: int):
         image = self.images[idx]
@@ -327,12 +332,14 @@ class Episode:
         history = self.storage["history"][idx]
         reasoning = self.storage["reasoning"][idx]
         decision = self.storage["decision"][idx]
+        instruction = self.storage["instruction"][idx]
 
         user_prompt = (
             f"Given high-level goal: {task}. \n" +
             f"Given navigation history: {history}. \n" +
             f"Given reasoning trace: {reasoning}. \n" +
-            f"Given low-level movement instruction: {decision}. \n"
+            f"Given robot decision: {decision}. \n" + 
+            f"Given low-level movement instruction: {instruction}. \n"
         )
 
         response, usage = self.chats.reflection_chat.send_message(image, user_prompt)
@@ -387,10 +394,7 @@ if __name__ == "__main__":
 
     chats = Chats()
     chats.split_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["split"])
-    if task_type == "vlnce":
-        chats.history_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["history_task"])
-    elif task_type == "objectnav":
-        chats.history_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["history"])
+    chats.history_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["history"])
     chats.instruction_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["instruction"])
     chats.reasoning_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["reasoning"])
     chats.reflection_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["reflection"])
