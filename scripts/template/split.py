@@ -1,56 +1,31 @@
 INTRO_SPLIT = (
-    "You are an expert AI specializing in stateful image sequence analysis and interpretation. "
-    "Your primary task is to conduct a detailed step-by-step analysis of a photo sequence. "
-    "You must provide two key pieces of information for every step:\n"
-    "1. **History Summary**: A concise, observational summary of the robot's journey before this step. "
-    "This summary must focus exclusively on the **places the robot has passed and the significant objects it has seen**, based on visual evidence from all *preceding* frames.\n"
-    "2. **Current Instruction**: The specific instruction text that is being executed at this step.\n"
-    "You will receive the following inputs:\n"
-    "1. **Image Sequence**: A sequence of N frames, indexed from 0 to N-1.\n"
-    "2. **Instructions**: An ordered list of text commands describing the robot's actions.\n"
+    "You are an AI expert in image sequence segmentation. \n"
+    "Now you are given a sequence of N consecutive photos taken by a moving robot along with a set of ordered instructions. \n"
+    "Your task is to divide the photo sequence into segments, where each segment corresponds to one specific instruction. \n"
+    "For each segment, identify the starting frame number and the ending frame number of the corresponding instruction. \n"
+    "The first frame of the photo sequence is numbered 0, and the last frame is numbered N-1, where N is the total number of frames. \n"
 )
 
 REMINDER_SPLIT = (
     "IMPORTANT: \n"
-    "1. **History Summary Generation**:\n"
-    "   * For each frame `i`, the `history_summary` must be a purely descriptive summary of the visual information from frames `0` to `i-1`.\n"
-    "   * **Focus exclusively on**: The path taken, locations visited, and significant objects or features observed "
-    "   (e.g., 'Started in a kitchen with marble countertops, moved past a stainless steel refrigerator, and entered a living room with a brown sofa.').\n"
-    "   * The summary must include visual information for **ALL preceding frames** (0 to i-1)."
-    "   * The summary must not include information from the current frame `i` or any future frames.\n"
-    "   * **Edge Case**: For frame 0, the history must be a simple statement indicating there is no prior history (e.g., \"This is the starting frame, so there is no history yet.\").\n"
-    "2. **Identify Instruction Segments**: First, internally determine the `start_frame` and `end_frame` for each instruction to correctly identify the current instruction for any given frame.\n"
-    "   * The `start_frame` is the very first frame where an action becomes visually apparent.\n"
-    "   * The `end_frame` is the last frame where the action is still relevant.\n"
-    "3. **Output List Length**: The final output list in your response must contain exactly **N** objects, one for each frame.\n"
+    "1) Carefully analyze each instruction and the corresponding visual cues in the photo sequence. \n"
+    "2) Ensure that the starting frame of each segment corresponds to the first frame where the action described in the instruction becomes visually apparent. \n"
+    "3) The ending frame of each segment is not necessarily the starting frame of the next instruction, but it should be the last frame where the current instruction is still relevant. \n"
+    "4) The starting frame of the first instruction is always 0, and the ending frame of the last instruction is N-1. \n"
 )
 
 RESPONSE_TEMPLATE_SPLIT = (
     "Response Format:\n"
     "{\n"
-    '    "reasoning": "{Think step-by-step: '
-    'First, I will process the sequence frame by frame from 0 to N-1. '
-    'For each frame \'i\', I will analyze **ALL preceding frames** (0 to i-1) to build a purely observational summary of the path and significant objects seen. '
-    'Then, I will analyze the intent of each instruction, and scan the image sequence for key visual cues corresponding to these instructions, such as movement, rotation, or object interaction. '
-    'I will pinpoint the exact start frame where each action visually begins, and the exact end frame where each action visually ends. '
-    'For each frame, I will determine the current instruction based on the identified start and end frames of the actions.}",\n'
-    '    "segments": [[0, 1], [2, 4], ..., [N-3, N-1]],\n'
-    '    "frame_analysis": [\n'
-    '        {\n'
-    '            "history_summary": "This is the starting frame, so there is no history yet.",\n'
-    '            "current_instruction": "Move forward towards the door"\n'
-    '        },\n'
-    '        {\n'
-    '            "history_summary": "I started in a brightly lit office with a blue chair and a wooden desk.",\n'
-    '            "current_instruction": "Move forward towards the door"\n'
-    '        },\n'
-    '        {\n'
-    '            "history_summary": "I have moved across the office, passing the blue chair and the wooden desk. '
-    'It is now positioned in front of a white door with a silver handle.",\n'
-    '            "current_instruction": "Open the door"\n'
-    '        }\n'
-    '    ]\n'
+    '    "reasoning": "{Think step by step: '
+    '1) Analyze Instructions: Read and understand each instruction’s intent (e.g., "turn left," "move forward"). '
+    '2) Observe Visual Cues: Scan the photo sequence for key changes (e.g., robot movement, object interaction, direction shifts). '
+    '3) Match Instructions to Frames: Align each instruction’s expected action with the first frame where the action becomes visually apparent. '
+    '4) Validate Starting Frames: Ensure the previous instruction ends before the next instruction begins. '
+    '5) Output: Based on the analysis, provide a list of starting frame numbers for each instruction segment.}",\n'
+    '    "start_step": [{the start step of the first instruction}, {the start step of the second instruction}, ...],\n'
     "}\n"
+    "Remember to count the images from 0, not 1.\n"
     "Ensure the response can be parsed by Python json.loads. Do not wrap the json codes in JSON markers."
 )
 
