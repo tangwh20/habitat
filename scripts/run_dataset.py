@@ -3,9 +3,8 @@ import random
 
 from chat_wrapper import ChatGPT, PromptCounter
 from template import TEMPLATES
-from dataset import Episode, Chats
+from dataset import Episode, Chats, MODEL_NAME
 
-MODEL_NAME = "gpt-4.1-mini"
 DATA_BASE_PATH = "/data1/tangwenhao/datasets"
 
 chats = Chats()

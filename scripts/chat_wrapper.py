@@ -24,6 +24,7 @@ MODEL_COST = {
     "gpt-4.1": (2.0, 8.0),
     "gpt-4.1-mini": (0.4, 1.6),
     "gpt-4.1-nano": (0.1, 0.4),
+    "gpt-5-mini": (0.25, 2.0),
     "Qwen/Qwen2.5-VL-7B-Instruct": (0.0, 0.0),
 }
 
