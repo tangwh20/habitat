@@ -17,8 +17,7 @@ REMINDER_HISTORY = (
     "IMPORTANT:\n"
     "1. **Be Concise**: The history should be detailed but not overly verbose. Focus on key locations and objects. Use no more than 3-4 sentences to summarize the journey.\n"
     "2. **Logical Flow**: Ensure the history follows a logical sequence of events leading to the current position.\n"
-    "3. **Conciseness**: While being detailed, keep the history concise and focused on the navigation journey.\n"
-    "4. **Avoid Redundancy**: Do not repeat information unnecessarily; each entry should add new insights to the history.\n"
+    "3. **Avoid Redundancy**: Do not repeat information unnecessarily; each entry should add new insights to the history.\n"
 )
 
 RESPONSE_TEMPLATE_HISTORY = (
