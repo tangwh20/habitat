@@ -302,7 +302,7 @@ class Episode:
             except json.JSONDecodeError:
                 print(f"Error decoding JSON response at index {i}: {response}")
                 self.storage["history"][i] = response.strip()
-            print(f"Finished generating history for image {i+1}/{num_total_images}")
+            # print(f"Finished generating history for image {i+1}/{num_total_images}")
 
     def generate_onestep_reasoning(self, idx: int):
         image = self.images[idx]
@@ -388,30 +388,3 @@ class Episode:
         return relative_positions, relative_yaws
     
 
-if __name__ == "__main__":
-    # Example usage
-    task_type = "vlnce"  # "vlnce" or "objectnav"
-
-    chats = Chats()
-    chats.split_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["split"])
-    chats.history_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["history"])
-    chats.instruction_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["instruction"])
-    chats.reasoning_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["reasoning"])
-    chats.reflection_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["reflection"])
-
-
-    episode = Episode(task_type=task_type, episode_id="1pXnuDYAj8r_1524", chats=chats)
-    episode.load_data(input_data_type="base", data_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_raw"))
-    episode.load_data(input_data_type="task", data_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_task"))
-    # episode.generate_trajectory()
-    # episode.generate_task_history()
-
-    idx = 34
-    episode.generate_onestep_instruction(idx=idx)
-    episode.generate_onestep_reasoning(idx=idx)
-    episode.generate_onestep_reflection(idx=idx)
-
-    episode.save_data(output_data_type="task", output_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_task"))
-    episode.visualize_data(step=idx, visualize_path=os.path.join(DATA_BASE_PATH, f"{task_type}/visualize"))
-
-    print(f"Usage: {episode.counter.get_usage()}")
