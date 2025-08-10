@@ -63,14 +63,14 @@ scene_names=(
 )
 
 # parallel --jobs 56 \
-#     python scripts/task.py \
+#     python scripts/run_rollout.py \
 #     --task_name objectnav \
 #     --scene_name {1} \
 #     --output_path /data1/tangwenhao/datasets/objectnav/data_raw \
 #     ::: "${scene_names[@]}"
 
 parallel --jobs 10 \
-    python scripts/task.py \
+    python scripts/run_rollout.py \
     --task_name vlnce \
     --split_num {1} \
     --output_path /data1/tangwenhao/datasets/vlnce/data_raw \
