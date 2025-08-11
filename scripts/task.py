@@ -39,6 +39,7 @@ class RolloutTask:
             self, 
             task_name: str, 
             agent: FixedAgent = None, 
+            split: str = "train",
             split_num: int = None,
             scene_name: str = None,
             output_path: str = None,
@@ -48,6 +49,7 @@ class RolloutTask:
         assert task_name in ["vlnce", "objectnav"], "Invalid task name"
         self.task_name = task_name
         self.agent = agent
+        self.split = split
         self.split_num = split_num
         self.scene_name = scene_name
         self.output_path = output_path
@@ -91,6 +93,7 @@ class RolloutTask:
         with habitat.config.read_write(config):
             # breakpoint()
             config.habitat.update({"seed": 200})
+            config.habitat.dataset.update({"split": self.split})
             config.habitat.environment.iterator_options.update({"group_by_scene": False})
             config.habitat.simulator.habitat_sim_v0.update({"allow_sliding": True})
             config.habitat.simulator.agents.main_agent.update({"radius": 0.1}) # Agent collision radius (default is 0.1)

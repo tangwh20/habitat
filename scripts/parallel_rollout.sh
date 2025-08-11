@@ -62,16 +62,18 @@ scene_names=(
     "ZMojNkEp431"
 )
 
-# parallel --jobs 56 \
-#     python scripts/run_rollout.py \
-#     --task_name objectnav \
-#     --scene_name {1} \
-#     --output_path /data1/tangwenhao/datasets/objectnav/data_raw \
-#     ::: "${scene_names[@]}"
-
-parallel --jobs 10 \
+parallel --jobs 56 \
     python scripts/run_rollout.py \
-    --task_name vlnce \
-    --split_num {1} \
-    --output_path /data1/tangwenhao/datasets/vlnce/data_raw \
-    ::: {0..9} # Process splits 0 to 9 in parallel
+    --task_name objectnav \
+    --split train \
+    --scene_name {1} \
+    --output_path /data1/tangwenhao/datasets/objectnav/data_raw \
+    ::: "${scene_names[@]}"
+
+# parallel --jobs 20 \
+#     python scripts/run_rollout.py \
+#     --task_name vlnce \
+#     --split train \
+#     --split_num {1} \
+#     --output_path /data1/tangwenhao/datasets/vlnce/data_raw \
+#     ::: {0..19} # Process splits 0 to 19 in parallel

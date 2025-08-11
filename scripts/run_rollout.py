@@ -8,6 +8,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Run Habitat task rollout")
     parser.add_argument("--task_name", type=str, choices=["vlnce", "objectnav"], required=True, help="Task name")
+    parser.add_argument("--split", type=str, default="train", choices=["train", "val"], help="Dataset split")
     parser.add_argument("--split_num", type=int, default=None, help="Split number for vlnce task. If not provided, will process the entire dataset.")
     parser.add_argument("--scene_name", type=str, default=None, help="Scene name for objectnav task. If not provided, will process all scenes in the dataset.")
     parser.add_argument("--output_path", type=str, default=None, help="Output path for results")
@@ -18,9 +19,9 @@ if __name__ == "__main__":
     # Create error log file
     import time
     if args.split_num is not None:
-        log_filepath = f"logs/{args.task_name}/parallel_{time.strftime('%m%d')}/{args.split_num}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log"
+        log_filepath = f"logs/{args.task_name}/parallel_{time.strftime('%m%d_%H%M')}/{args.split_num}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log"
     elif args.scene_name is not None:
-        log_filepath = f"logs/{args.task_name}/parallel_{time.strftime('%m%d')}/{args.scene_name}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log"
+        log_filepath = f"logs/{args.task_name}/parallel_{time.strftime('%m%d_%H%M')}/{args.scene_name}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.log"
     else:
         log_filepath = f"logs/{args.task_name}/{time.strftime('%Y-%m-%d_%H-%M-%S')}.log"
     os.makedirs(os.path.dirname(log_filepath), exist_ok=True)
