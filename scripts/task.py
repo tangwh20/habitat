@@ -92,7 +92,7 @@ class RolloutTask:
             # breakpoint()
             config.habitat.update({"seed": 200})
             config.habitat.environment.iterator_options.update({"group_by_scene": False})
-            config.habitat.simulator.habitat_sim_v0.update({"allow_sliding": False})
+            config.habitat.simulator.habitat_sim_v0.update({"allow_sliding": True})
             config.habitat.simulator.agents.main_agent.update({"radius": 0.1}) # Agent collision radius (default is 0.1)
             config.habitat.task.measurements.update({"collisions": CollisionsMeasurementConfig()})
 
