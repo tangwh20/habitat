@@ -1,5 +1,6 @@
 import os
 import random
+from tqdm import tqdm
 
 from chat_wrapper import ChatGPT, PromptCounter
 from template import TEMPLATES
@@ -17,31 +18,31 @@ chats.reflection_chat = ChatGPT(model_name=MODEL_NAME, system_prompt=TEMPLATES["
 
 def generate_common_data(task_type: str, episode_id: str):
     episode = Episode(task_type=task_type, episode_id=episode_id, chats=chats)
-    episode.load_data(input_data_type="base", data_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_raw"))
+    episode.load_data(input_data_type="base", data_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_raw_val"))
     episode.generate_trajectory()
     episode.generate_task_history()
-    episode.save_data(output_data_type="task", output_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_task"))
+    episode.save_data(output_data_type="task", output_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_task_val"))
 
     return episode.counter
 
 
 def generate_stepwise_data(task_type: str, episode_id: str, step: int):
     episode = Episode(task_type=task_type, episode_id=episode_id, chats=chats)
-    episode.load_data(input_data_type="base", data_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_raw"))
-    episode.load_data(input_data_type="task", data_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_task"))
+    episode.load_data(input_data_type="base", data_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_raw_val"))
+    episode.load_data(input_data_type="task", data_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_task_val"))
     episode.generate_onestep_instruction(idx=step)
     episode.generate_onestep_reasoning(idx=step)
     episode.generate_onestep_reflection(idx=step)
-    episode.save_data(output_data_type="task", output_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_task")) # TODO: Change to custom output path if needed
+    episode.save_data(output_data_type="task", output_path=os.path.join(DATA_BASE_PATH, f"{task_type}/test/data_task_val")) # TODO: Change to custom output path if needed
 
     return episode.counter
 
 
 def visualize_stepwise_data(task_type: str, episode_id: str, step: int):
     episode = Episode(task_type=task_type, episode_id=episode_id, chats=chats)
-    episode.load_data(input_data_type="base", data_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_raw"))
-    episode.load_data(input_data_type="task", data_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_task"))
-    episode.visualize_data(step=step, visualize_path=os.path.join(DATA_BASE_PATH, f"{task_type}/visualize"))
+    episode.load_data(input_data_type="base", data_path=os.path.join(DATA_BASE_PATH, f"{task_type}/data_raw_val"))
+    episode.load_data(input_data_type="task", data_path=os.path.join(DATA_BASE_PATH, f"{task_type}/test/data_task_val"))
+    episode.visualize_data(step=step, visualize_path=os.path.join(DATA_BASE_PATH, f"{task_type}/test/visualize_task_val"))
 
 
 if __name__ == "__main__":
@@ -53,24 +54,26 @@ if __name__ == "__main__":
 
     # logging
     import time
-    log_path = f"logs/{args.task_type}/{time.strftime('%m%d')}/{args.scene_id}.log"
+    log_path = f"logs/{args.task_type}/data_{time.strftime('%m%d_%H%M')}/{args.scene_id}.log"
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
     log_f = open(log_path, "a")
     log_f.write(f"Start processing scene: {args.scene_id} at {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
     log_f.flush()
 
-    # scene_path = f"/data1/tangwenhao/datasets/vlnce/data_test/preview_newdata_subtask/{args.scene_id}"
-    scene_path = os.path.join(DATA_BASE_PATH, f"{args.task_type}/data_task/{args.scene_id}")
+    scene_path = f"/data1/tangwenhao/datasets/{args.task_type}/data_task_val/{args.scene_id}"
+    # scene_path = os.path.join(DATA_BASE_PATH, f"{args.task_type}/data_task/{args.scene_id}")
     total_counter = PromptCounter(model_name=MODEL_NAME)
-    for episode_num in os.listdir(scene_path):
+    for episode_num in tqdm(os.listdir(scene_path)):
         episode_id = f"{args.scene_id}_{episode_num}"
         try:
             # episode_counter = generate_common_data(args.task_type, episode_id) # Uncomment to generate common data
 
             # TODO: idx selection (currently random)
             num_steps = len(os.listdir(os.path.join(scene_path, episode_num, "images")))
-            rand_idx = random.randint(0, num_steps - 1)
-            episode_counter = generate_stepwise_data(args.task_type, episode_id, rand_idx)
+            idx = random.randint(0, num_steps - 1)
+            # idx = int(os.listdir(os.path.join(scene_path, episode_num, "trajectory"))[0].split(".")[0])
+            episode_counter = generate_stepwise_data(args.task_type, episode_id, idx)
+            visualize_stepwise_data(args.task_type, episode_id, idx)
 
             log_f.write(f"Episode {episode_id} usage: {episode_counter.get_usage()}\n")
             log_f.flush()

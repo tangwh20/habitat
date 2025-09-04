@@ -2,11 +2,12 @@ import os
 import json
 import gzip
 
-data_path = "/home/tangwenhao/Workspace/habitat/data/datasets/vln/mp3d/r2r/v1/train"
-output_path = "/home/tangwenhao/Workspace/habitat/outputs/data/vlnce/data_raw"
+split = "train"
+data_path = f"/home/tangwenhao/Workspace/habitat/data/datasets/vln/mp3d/r2r/v1/{split}"
+output_path = "/data1/tangwenhao/datasets/vlnce/data_raw"
 
 os.chdir(data_path)
-with gzip.open("train.json.gz", "rt") as f:
+with gzip.open(f"{split}.json.gz", "rt") as f:
     data = json.load(f)
     instruction_vocab = data["instruction_vocab"]
 
@@ -14,20 +15,27 @@ episodes = []
 for episode in data["episodes"]:
     episode_id = str(episode["episode_id"])
     scene_id = os.path.basename(episode["scene_id"]).split('.')[0]
-    if not os.path.exists(os.path.join(output_path, scene_id, episode_id)):
+    if scene_id == "D7N2EKCX4Sj" and episode_id == "5429":
         episodes.append(episode)
+        break
+#     if not os.path.exists(os.path.join(output_path, scene_id, episode_id)):
+#         episodes.append(episode)
 
-total_num = len(episodes)
-num_splits = 10
-split_size = total_num // num_splits
-for i in range(num_splits):
-    split_episodes = episodes[i * split_size: (i + 1) * split_size]
-    split_data = {
-        "episodes": split_episodes,
-        "instruction_vocab": instruction_vocab,
-    }
-    with gzip.open(f"train_{i}.json.gz", "wt") as f:
-        json.dump(split_data, f)
+# episodes = data["episodes"]
 
+# total_num = len(episodes)
+# num_splits = 20
+# split_size = total_num // num_splits
+# for i in range(num_splits):
+#     split_episodes = episodes[i * split_size: (i + 1) * split_size]
+#     split_data = {
+#         "episodes": split_episodes,
+#         "instruction_vocab": instruction_vocab,
+#     }
+#     with gzip.open(f"{split}_{i}.json.gz", "wt") as f:
+#         json.dump(split_data, f)
 
-print("Number of entries:", len(data["episodes"]))
+with gzip.open(f"{split}_0.json.gz", "wt") as f:
+    json.dump({"episodes": episodes, "instruction_vocab": instruction_vocab}, f)
+
+print("Number of entries:", len(episodes))
